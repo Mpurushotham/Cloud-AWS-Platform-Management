@@ -1,0 +1,63 @@
+name: "05 - DAST"
+
+on:
+  schedule:
+    - cron: "0 2 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL for DAST scan"
+        required: true
+        default: "https://api-dev.cap.internal"
+      environment:
+        description: "Target environment (dev/staging only)"
+        required: true
+        default: "dev"
+        type: choice
+        options: [dev, staging]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  zap-baseline:
+    name: "OWASP ZAP Baseline — ${{ github.event.inputs.environment || 'dev' }}"
+    runs-on: ubuntu-24.04
+    if: ${{ github.event.inputs.environment != 'prod' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ github.event.inputs.target_url || 'https://api-dev.cap.internal' }}
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: >
+            -a
+            -j
+            -m 5
+            -T 60
+          fail_action: warn
+          allow_issue_writing: false
+
+      - name: Upload ZAP SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: zap-results.sarif
+          category: zap-dast
+
+  zap-api-scan:
+    name: "ZAP API Scan — ${{ github.event.inputs.environment || 'dev' }}"
+    runs-on: ubuntu-24.04
+    if: ${{ github.event.inputs.environment != 'prod' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target: ${{ github.event.inputs.target_url || 'https://api-dev.cap.internal' }}/openapi.json
+          format: openapi
+          fail_action: warn

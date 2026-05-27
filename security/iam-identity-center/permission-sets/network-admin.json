@@ -1,0 +1,31 @@
+{
+  "Name": "NetworkAdmin",
+  "Description": "Network infrastructure management — VPC, TGW, Route53, ACM",
+  "SessionDuration": "PT4H",
+  "InlinePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "NetworkingAccess",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:*Vpc*", "ec2:*Subnet*", "ec2:*Route*", "ec2:*Gateway*",
+          "ec2:*SecurityGroup*", "ec2:*NetworkAcl*", "ec2:*FlowLog*",
+          "ec2:*TransitGateway*", "ec2:*VpcEndpoint*", "ec2:*Peering*",
+          "route53:*", "route53resolver:*", "acm:*",
+          "globalaccelerator:*", "directconnect:*"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "ReadOnlyForContext",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:Describe*", "iam:ListRoles", "iam:GetRole",
+          "cloudwatch:GetMetric*", "cloudwatch:ListMetrics"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+}

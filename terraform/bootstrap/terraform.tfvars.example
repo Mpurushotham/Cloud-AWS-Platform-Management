@@ -1,0 +1,8 @@
+aws_region            = "us-east-1"
+management_account_id = "111111111111"
+logging_account_id    = "222222222222"
+github_org            = "your-github-org"
+github_repo           = "Cloud-AWS-Platform-Management"
+state_bucket_name     = "cap-terraform-state-your-org"
+state_lock_table_name = "cap-terraform-state-lock"
+allowed_regions       = ["us-east-1", "us-west-2"]

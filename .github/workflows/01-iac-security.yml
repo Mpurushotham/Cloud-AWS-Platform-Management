@@ -1,0 +1,131 @@
+name: "01 - IaC Security"
+
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - "cdk/**"
+      - "conftest.rego"
+      - ".checkov.yml"
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  checkov:
+    name: "Checkov IaC Scan"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          config_file: .checkov.yml
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          soft_fail: false
+          download_external_modules: false
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+  tfsec:
+    name: "tfsec Scan"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform/
+          format: sarif
+          sarif_file: tfsec-results.sarif
+          additional_args: --exclude-downloaded-modules --minimum-severity HIGH
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: tfsec-results.sarif
+          category: tfsec
+
+  tflint:
+    name: "TFLint"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.52.0
+
+      - name: Init TFLint
+        run: tflint --init --config=.tflint.hcl
+
+      - name: Run TFLint across all modules
+        run: |
+          find terraform/modules -name "*.tf" -print0 \
+            | xargs -0 -I{} dirname {} \
+            | sort -u \
+            | while IFS= read -r dir; do
+                echo "Linting $dir"
+                tflint --config="$(pwd)/.tflint.hcl" --chdir="$dir" || exit 1
+              done
+
+  infracost:
+    name: "Infracost Cost Estimate"
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate Infracost JSON
+        run: |
+          infracost breakdown \
+            --path terraform/environments/prod \
+            --format json \
+            --out-file infracost.json
+
+      - name: Post Infracost comment
+        uses: infracost/actions/comment@v3
+        with:
+          path: infracost.json
+          behavior: update
+
+  opa-validate:
+    name: "OPA Policy Validation"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OPA + conftest
+        run: |
+          wget -q -O /tmp/conftest.tar.gz \
+            https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
+          tar -xzf /tmp/conftest.tar.gz -C /tmp
+          sudo mv /tmp/conftest /usr/local/bin/conftest
+
+      - name: Validate OPA policy syntax
+        run: conftest verify --policy conftest.rego
+
+      - name: Test OPA policies with fixtures
+        run: |
+          if [ -d test-fixtures ]; then
+            conftest test test-fixtures/ --policy conftest.rego
+          else
+            echo "No test fixtures found — skipping OPA fixture tests"
+          fi

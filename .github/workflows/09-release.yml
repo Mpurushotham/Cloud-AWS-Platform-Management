@@ -1,0 +1,75 @@
+name: "09 - Release"
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    name: "Semantic Release"
+    runs-on: ubuntu-24.04
+    outputs:
+      new_release_published: ${{ steps.release.outputs.new_release_published }}
+      new_release_version: ${{ steps.release.outputs.new_release_version }}
+      new_release_git_tag: ${{ steps.release.outputs.new_release_git_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install semantic-release
+        run: |
+          npm install --save-dev \
+            semantic-release \
+            @semantic-release/changelog \
+            @semantic-release/git \
+            @semantic-release/github \
+            conventional-changelog-conventionalcommits
+
+      - name: Run semantic-release
+        id: release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  sbom-attestation:
+    name: "SBOM & Attestation"
+    runs-on: ubuntu-24.04
+    needs: [release]
+    if: needs.release.outputs.new_release_published == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.new_release_git_tag }}
+
+      - name: Install Syft + cosign
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/sigstore/cosign/main/install.sh \
+            | sh -s -- -b /usr/local/bin cosign
+
+      - name: Generate release SBOM
+        run: |
+          syft dir:. \
+            --output spdx-json=sbom-${{ needs.release.outputs.new_release_version }}.spdx.json \
+            --output cyclonedx-json=sbom-${{ needs.release.outputs.new_release_version }}.cyclonedx.json
+
+      - name: Attach SBOM to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.new_release_git_tag }}
+          files: sbom-*.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

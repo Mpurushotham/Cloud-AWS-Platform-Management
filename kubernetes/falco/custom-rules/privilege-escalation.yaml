@@ -1,0 +1,25 @@
+- rule: Setuid or Setgid Bit Set
+  desc: Detect chmod calls that set setuid or setgid bits
+  condition: >
+    syscall.type = chmod and
+    (evt.arg.mode contains "S_ISUID" or evt.arg.mode contains "S_ISGID") and
+    not proc.name in (chown, install)
+  output: >
+    Setuid/setgid bit set (user=%user.name command=%proc.cmdline
+    file=%fd.name container=%container.name)
+  priority: WARNING
+  tags: [process, privilege-escalation]
+
+- rule: Container Spawns Shell
+  desc: Detect shell spawned inside a container (possible breakout attempt)
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (bash, sh, dash, zsh, csh) and
+    proc.pname not in (bash, sh, dash, zsh, csh, sshd, sudo) and
+    not proc.cmdline contains "entrypoint"
+  output: >
+    Shell spawned in container (user=%user.name shell=%proc.name
+    parent=%proc.pname container=%container.name image=%container.image.repository)
+  priority: WARNING
+  tags: [shell, container]

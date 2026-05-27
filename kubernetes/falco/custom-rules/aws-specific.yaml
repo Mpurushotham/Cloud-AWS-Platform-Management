@@ -1,0 +1,23 @@
+- rule: IMDS Endpoint Access from Container
+  desc: Detect access to EC2 instance metadata service from within a container
+  condition: >
+    outbound and
+    fd.sip = "169.254.169.254" and
+    container
+  output: >
+    IMDS access detected from container (user=%user.name command=%proc.cmdline
+    container=%container.name image=%container.image.repository)
+  priority: WARNING
+  tags: [aws, imds, container]
+
+- rule: AWS Credential File Read
+  desc: Detect reads of AWS credential files from within containers
+  condition: >
+    open_read and
+    container and
+    fd.name in ("/root/.aws/credentials", "/home/.aws/credentials", "/.aws/credentials")
+  output: >
+    AWS credentials file read in container (user=%user.name file=%fd.name
+    command=%proc.cmdline container=%container.name)
+  priority: CRITICAL
+  tags: [aws, credentials, container]

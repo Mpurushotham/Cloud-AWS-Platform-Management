@@ -1,0 +1,64 @@
+# Terraform
+*.tfvars
+!*.tfvars.example
+*.tfplan
+*.tfplan.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CDK
+cdk/cdk.out/
+cdk/node_modules/
+cdk/*.js
+cdk/*.d.ts
+cdk/lib/**/*.js
+cdk/lib/**/*.d.ts
+cdk/bin/**/*.js
+cdk/bin/**/*.d.ts
+cdk/test/**/*.js
+cdk/test/**/*.d.ts
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+*.egg
+
+# Security / Secrets
+*.pem
+*.key
+*.p12
+*.pfx
+.secrets.baseline
+.gitleaks-report.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+build/
+*.zip
+sbom-*.json
+sbom-*.spdx
+
+# Logs
+*.log
+logs/

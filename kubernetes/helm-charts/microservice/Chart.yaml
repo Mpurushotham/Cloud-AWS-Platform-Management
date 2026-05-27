@@ -1,0 +1,6 @@
+apiVersion: v2
+name: microservice
+description: CAP golden path Helm chart for containerized microservices
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

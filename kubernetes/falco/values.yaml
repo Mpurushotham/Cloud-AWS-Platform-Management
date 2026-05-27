@@ -1,0 +1,37 @@
+falco:
+  grpc:
+    enabled: true
+    bind_address: "unix:///run/falco/falco.sock"
+    threads_num: 8
+
+  grpc_output:
+    enabled: true
+
+  json_output: true
+  json_include_output_property: true
+
+  rules_file:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d/crypto-mining.yaml
+    - /etc/falco/rules.d/data-exfiltration.yaml
+    - /etc/falco/rules.d/privilege-escalation.yaml
+    - /etc/falco/rules.d/aws-specific.yaml
+
+  program_output:
+    enabled: false
+
+  http_output:
+    enabled: true
+    url: "https://falcosidekick:2801/"
+
+falcosidekick:
+  enabled: true
+  config:
+    aws:
+      sns:
+        topicarn: "arn:aws:sns:us-east-1:444444444444:cap-dev-security-alerts"
+        region: "us-east-1"
+      s3:
+        bucket: "cap-dev-falco-events"
+        region: "us-east-1"

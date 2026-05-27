@@ -1,0 +1,30 @@
+# Global owners — review required on all changes
+* @platform-team
+
+# Terraform platform/foundation
+/terraform/ @platform-team
+/terraform/environments/management/ @platform-team @security-team
+/terraform/environments/security/ @security-team
+/terraform/environments/logging/ @security-team
+
+# Security configurations — security team mandatory
+/security/ @security-team
+/security/scps/ @security-team @platform-team
+/security/iam-identity-center/ @security-team
+
+# Kubernetes security policies
+/kubernetes/kyverno/ @security-team @platform-team
+/kubernetes/falco/ @security-team
+/kubernetes/network-policies/ @platform-team @security-team
+
+# CI/CD workflows — platform team
+/.github/ @platform-team
+
+# CDK application layer
+/cdk/ @platform-team
+
+# IDP templates — platform team owns golden paths
+/idp/ @platform-team
+
+# Documentation
+/docs/ @platform-team

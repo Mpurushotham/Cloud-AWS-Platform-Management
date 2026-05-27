@@ -1,0 +1,203 @@
+name: "CDK Deploy"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cdk/**"
+  pull_request:
+    paths:
+      - "cdk/**"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  test:
+    name: "CDK Unit Tests"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Install dependencies
+        working-directory: cdk
+        run: npm ci
+
+      - name: Run tests
+        working-directory: cdk
+        run: npm test -- --coverage --ci
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-coverage
+          path: cdk/coverage/
+
+  synth:
+    name: "CDK Synth — ${{ matrix.env }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, staging, prod]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.env))] }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-CDKSynth-${{ matrix.env }}-${{ github.run_id }}
+
+      - name: Install CDK
+        working-directory: cdk
+        run: npm ci
+
+      - name: CDK Synth
+        working-directory: cdk
+        run: npx cdk synth --all --context environment=${{ matrix.env }}
+
+      - name: CDK Diff (PR only)
+        if: github.event_name == 'pull_request'
+        working-directory: cdk
+        run: |
+          npx cdk diff --all --context environment=${{ matrix.env }} 2>&1 | tee cdk-diff.txt
+
+      - name: Comment CDK diff on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const diff = fs.existsSync('cdk/cdk-diff.txt')
+              ? fs.readFileSync('cdk/cdk-diff.txt', 'utf8')
+              : 'No diff output';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## CDK Diff — \`${{ matrix.env }}\`\n\n\`\`\`\n${diff.slice(0, 60000)}\n\`\`\``
+            });
+
+  deploy-dev:
+    name: "CDK Deploy — dev"
+    runs-on: ubuntu-24.04
+    environment: dev
+    needs: [test, synth]
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: cdk-dev
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_DEV }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-CDKDeploy-dev-${{ github.run_id }}
+
+      - run: npm ci
+        working-directory: cdk
+
+      - name: CDK Deploy (dev — all stacks)
+        working-directory: cdk
+        run: |
+          npx cdk deploy --all \
+            --context environment=dev \
+            --require-approval never \
+            --progress events
+
+  deploy-staging:
+    name: "CDK Deploy — staging"
+    runs-on: ubuntu-24.04
+    environment: staging
+    needs: [deploy-dev]
+    concurrency:
+      group: cdk-staging
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_STAGING }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-CDKDeploy-staging-${{ github.run_id }}
+
+      - run: npm ci
+        working-directory: cdk
+
+      - name: CDK Deploy (staging)
+        working-directory: cdk
+        run: |
+          npx cdk deploy --all \
+            --context environment=staging \
+            --require-approval never \
+            --progress events
+
+  deploy-prod:
+    name: "CDK Deploy — prod (2 reviewers)"
+    runs-on: ubuntu-24.04
+    environment: production
+    needs: [deploy-staging]
+    concurrency:
+      group: cdk-prod
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_PROD }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-CDKDeploy-prod-${{ github.run_id }}
+
+      - run: npm ci
+        working-directory: cdk
+
+      - name: CDK Deploy (prod)
+        working-directory: cdk
+        run: |
+          npx cdk deploy --all \
+            --context environment=prod \
+            --require-approval never \
+            --progress events

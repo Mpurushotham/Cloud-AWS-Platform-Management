@@ -1,0 +1,27 @@
+Name: REST API Service
+Description: |
+  Standardized REST API service with API Gateway, ECS Fargate, RDS, WAF, and CloudFront.
+  Includes CI/CD pipeline, observability, and security baseline.
+Owner: platform-team
+Tags:
+  - category: web-api
+  - tier: standard
+Parameters:
+  ServiceName:
+    Type: String
+    Description: Name of the service (lowercase, hyphens)
+  Team:
+    Type: String
+    Description: Team name owning this service
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+  DatabaseEngine:
+    Type: String
+    AllowedValues: [postgres, mysql, none]
+    Default: postgres
+Outputs:
+  ApiEndpoint:
+    Description: Public API endpoint URL
+  EcrRepository:
+    Description: ECR repository URL for container images

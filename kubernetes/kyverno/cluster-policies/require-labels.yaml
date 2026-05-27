@@ -1,0 +1,25 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-pod-labels
+  annotations:
+    policies.kyverno.io/title: Require Pod Labels
+    policies.kyverno.io/category: Best Practices
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-required-labels
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: ["team-*", "app-*"]
+      validate:
+        message: "Pods must have labels: app, version, team."
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
+              version: "?*"
+              team: "?*"

@@ -1,0 +1,125 @@
+name: "06 - Compliance"
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+jobs:
+  prowler:
+    name: "Prowler — ${{ matrix.env }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: management
+            account_id: "111111111111"
+          - env: security
+            account_id: "222222222222"
+          - env: prod
+            account_id: "333333333333"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PROWLER_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Prowler-${{ matrix.env }}-${{ github.run_id }}
+
+      - name: Install Prowler
+        run: pip install prowler
+
+      - name: Run Prowler — CIS AWS Foundations 1.4
+        run: |
+          prowler aws \
+            --compliance cis_aws_1.4 \
+            --output-formats sarif,html,csv \
+            --output-filename prowler-cis-${{ matrix.env }} \
+            --output-directory prowler-results/ \
+            --ignore-exit-code-3
+
+      - name: Run Prowler — AWS Foundational Security Best Practices
+        run: |
+          prowler aws \
+            --compliance aws_foundational_security_best_practices_aws \
+            --output-formats sarif \
+            --output-filename prowler-fsbp-${{ matrix.env }} \
+            --output-directory prowler-results/ \
+            --ignore-exit-code-3
+
+      - name: Run Prowler — PCI-DSS 3.2.1
+        run: |
+          prowler aws \
+            --compliance pci_dss_3.2.1_aws \
+            --output-formats sarif \
+            --output-filename prowler-pci-${{ matrix.env }} \
+            --output-directory prowler-results/ \
+            --ignore-exit-code-3
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: prowler-results/prowler-cis-${{ matrix.env }}.sarif.json
+          category: prowler-${{ matrix.env }}
+
+      - name: Upload compliance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prowler-${{ matrix.env }}-${{ github.run_id }}
+          path: prowler-results/
+          retention-days: 90
+
+  drift-detection:
+    name: "Terraform Drift Detection"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, staging, prod]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.env))] }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Drift-${{ matrix.env }}-${{ github.run_id }}
+
+      - name: Terraform init
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: terraform init -input=false
+
+      - name: Terraform plan (drift check)
+        id: plan
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: |
+          terraform plan \
+            -var-file=terraform.tfvars \
+            -detailed-exitcode \
+            -input=false \
+            -no-color 2>&1 | tee plan-output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Alert on drift
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          echo "::error::DRIFT DETECTED in ${{ matrix.env }} environment!"
+          echo "Review plan output above for resource changes."
+          cat plan-output.txt
+          exit 1

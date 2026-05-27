@@ -1,0 +1,26 @@
+- rule: Crypto Mining Command Detected
+  desc: Detect execution of known crypto mining binaries
+  condition: >
+    spawned_process and
+    (proc.name in (xmrig, minerd, cryptonight, ethminer, ccminer) or
+     proc.cmdline contains "stratum+tcp" or
+     proc.cmdline contains "pool.minexmr.com" or
+     proc.cmdline contains "--donate-level")
+  output: >
+    Crypto mining binary detected (user=%user.name command=%proc.cmdline
+    container=%container.name image=%container.image.repository)
+  priority: CRITICAL
+  tags: [crypto, mining, process]
+
+- rule: Crypto Mining Network Connection
+  desc: Detect outbound connections on known crypto mining ports
+  condition: >
+    outbound and
+    (fd.sport in (3333, 4444, 5555, 7777, 9999, 14444, 45560) or
+     fd.sport_name contains "stratum")
+  output: >
+    Outbound connection on crypto mining port
+    (user=%user.name command=%proc.cmdline port=%fd.sport
+    container=%container.name)
+  priority: HIGH
+  tags: [network, crypto, mining]

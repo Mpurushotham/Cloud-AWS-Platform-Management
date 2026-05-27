@@ -1,0 +1,135 @@
+name: "08 - Terraform Apply"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  apply-dev:
+    name: "Apply — dev (auto)"
+    runs-on: ubuntu-24.04
+    environment: dev
+    concurrency:
+      group: terraform-dev
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_DEV }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Apply-dev-${{ github.run_id }}
+
+      - name: Terraform Init
+        working-directory: terraform/environments/dev
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/dev
+        run: |
+          terraform apply \
+            -var-file="terraform.tfvars" \
+            -auto-approve \
+            -input=false \
+            -no-color
+
+  apply-staging:
+    name: "Apply — staging (1 reviewer)"
+    runs-on: ubuntu-24.04
+    environment: staging
+    needs: [apply-dev]
+    concurrency:
+      group: terraform-staging
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_STAGING }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Apply-staging-${{ github.run_id }}
+
+      - name: Terraform Init
+        working-directory: terraform/environments/staging
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/staging
+        run: |
+          terraform apply \
+            -var-file="terraform.tfvars" \
+            -auto-approve \
+            -input=false \
+            -no-color
+
+  apply-prod:
+    name: "Apply — prod (2 reviewers + 60min wait)"
+    runs-on: ubuntu-24.04
+    environment: production
+    needs: [apply-staging]
+    concurrency:
+      group: terraform-prod
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_PROD }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Apply-prod-${{ github.run_id }}
+
+      - name: Terraform Init
+        working-directory: terraform/environments/prod
+        run: terraform init -input=false
+
+      - name: Terraform Plan (safety check before prod apply)
+        working-directory: terraform/environments/prod
+        run: |
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan.binary \
+            -detailed-exitcode \
+            -input=false \
+            -no-color
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/prod
+        run: |
+          terraform apply \
+            -auto-approve \
+            tfplan.binary
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Production Terraform apply succeeded"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"

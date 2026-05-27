@@ -1,0 +1,178 @@
+name: "07 - Terraform Plan"
+
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - "conftest.rego"
+      - ".checkov.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plan:
+    name: "Plan — ${{ matrix.env }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: dev
+            account_id: "444444444444"
+            role_suffix: DEV
+          - env: staging
+            account_id: "555555555555"
+            role_suffix: STAGING
+          - env: prod
+            account_id: "666666666666"
+            role_suffix: PROD
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+          terraform_wrapper: true
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', matrix.role_suffix)] }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Plan-${{ matrix.env }}-${{ github.run_id }}
+
+      - name: Terraform Init — ${{ matrix.env }}
+        id: init
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: terraform init -input=false
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive terraform/
+        continue-on-error: true
+
+      - name: Terraform Validate — ${{ matrix.env }}
+        id: validate
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan — ${{ matrix.env }}
+        id: plan
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: |
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan.binary \
+            -no-color \
+            -detailed-exitcode \
+            -input=false 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Convert plan to JSON for OPA
+        if: steps.plan.outputs.exitcode != '1'
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: terraform show -json tfplan.binary > tfplan.json
+
+      - name: Install conftest
+        run: |
+          wget -qO /tmp/conftest.tar.gz \
+            https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
+          tar -xzf /tmp/conftest.tar.gz -C /tmp
+          sudo mv /tmp/conftest /usr/local/bin/conftest
+
+      - name: OPA Policy Check — ${{ matrix.env }}
+        id: opa
+        if: steps.plan.outputs.exitcode != '1'
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: |
+          conftest test tfplan.json \
+            --policy ../../../conftest.rego \
+            --output table 2>&1 | tee opa-results.txt
+        continue-on-error: true
+
+      - name: Drift Detection Check
+        id: drift
+        run: |
+          if [ "${{ steps.plan.outputs.exitcode }}" = "2" ]; then
+            echo "DRIFT_DETECTED=true" >> $GITHUB_OUTPUT
+          else
+            echo "DRIFT_DETECTED=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment plan on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "${{ steps.plan.outcome }}"
+          OPA: "${{ steps.opa.outcome }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const driftDetected = "${{ steps.drift.outputs.DRIFT_DETECTED }}" === "true";
+            const driftBadge = driftDetected ? "⚠️ DRIFT DETECTED" : "✅ No drift";
+            const output = `## Terraform Plan — \`${{ matrix.env }}\`
+
+            | Step | Status |
+            |------|--------|
+            | Init | \`${{ steps.init.outcome }}\` |
+            | Format | \`${{ steps.fmt.outcome }}\` |
+            | Validate | \`${{ steps.validate.outcome }}\` |
+            | Plan | \`${{ steps.plan.outcome }}\` |
+            | OPA Policies | \`${{ steps.opa.outcome }}\` |
+            | Drift | ${driftBadge} |
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            $(cat terraform/environments/${{ matrix.env }}/plan.txt 2>/dev/null || echo 'Plan output unavailable')
+            \`\`\`
+
+            </details>
+
+            <details><summary>OPA Results</summary>
+
+            \`\`\`
+            $(cat terraform/environments/${{ matrix.env }}/opa-results.txt 2>/dev/null || echo 'OPA results unavailable')
+            \`\`\`
+
+            </details>
+
+            *Actor: @${{ github.actor }} | Run: ${{ github.run_id }}*`;
+
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            for (const comment of comments.data) {
+              if (comment.body.includes(`Terraform Plan — \`${{ matrix.env }}\``) &&
+                  comment.user.login === 'github-actions[bot]') {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Fail if plan errored or OPA failed
+        run: |
+          if [ "${{ steps.plan.outputs.exitcode }}" = "1" ]; then
+            echo "Terraform plan failed"
+            exit 1
+          fi
+          if [ "${{ steps.opa.outcome }}" = "failure" ]; then
+            echo "OPA policy check failed"
+            exit 1
+          fi

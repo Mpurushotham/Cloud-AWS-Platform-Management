@@ -1,0 +1,34 @@
+{
+  "serviceName": "cap-ENVIRONMENT-api",
+  "cluster": "arn:aws:ecs:us-east-1:ACCOUNT_ID:cluster/cap-ENVIRONMENT-ecs",
+  "taskDefinition": "cap-api:REVISION",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["PRIVATE_SUBNET_ID_1", "PRIVATE_SUBNET_ID_2", "PRIVATE_SUBNET_ID_3"],
+      "securityGroups": ["ECS_SG_ID"],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "ALB_TARGET_GROUP_ARN",
+      "containerName": "api",
+      "containerPort": 8080
+    }
+  ],
+  "deploymentConfiguration": {
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "deploymentController": {"type": "ECS"},
+  "enableECSManagedTags": true,
+  "propagateTags": "SERVICE",
+  "enableExecuteCommand": false
+}

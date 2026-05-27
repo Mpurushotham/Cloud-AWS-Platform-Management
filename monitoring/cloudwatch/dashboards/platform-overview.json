@@ -1,0 +1,38 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "properties": {
+        "markdown": "## CAP Platform Overview\n**Environment:** ${environment} | **Region:** us-east-1"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "EKS Cluster CPU Utilization",
+        "metrics": [["ContainerInsights", "node_cpu_utilization", "ClusterName", "cap-${environment}-eks"]],
+        "period": 300,
+        "stat": "Average",
+        "view": "timeSeries"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "RDS Connection Count",
+        "metrics": [["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "cap-${environment}-rds"]],
+        "period": 60,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "ALB Request Count (5xx)",
+        "metrics": [["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "${alb_arn_suffix}"]],
+        "period": 60,
+        "stat": "Sum"
+      }
+    }
+  ]
+}

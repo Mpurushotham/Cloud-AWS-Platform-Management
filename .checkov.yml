@@ -1,0 +1,31 @@
+directory:
+  - terraform/
+
+framework:
+  - terraform
+  - terraform_plan
+
+output:
+  - sarif
+  - cli
+
+download-external-modules: false
+evaluate-variables: true
+compact: true
+
+# Skip checks with documented false-positive justifications
+skip-check:
+  # CKV_AWS_7: KMS key rotation — we manage rotation via aws_kms_key.enable_key_rotation = true
+  # Skip the older resource-level check that flags the same thing redundantly
+  - CKV2_AWS_64   # MQ — not used in this platform
+
+  # Log group encryption is enforced by module — skip redundant check
+  - CKV_AWS_338   # CloudWatch log group KMS — enforced in cloudwatch module
+
+  # NAT GW is intentional for private subnet egress
+  - CKV2_AWS_19   # Ensure that all EIP addresses are attached — NAT EIPs are attached
+
+  # Lambda reserved concurrency: platform remediation lambdas are event-driven, not latency-critical
+  - CKV_AWS_115
+
+soft-fail: false

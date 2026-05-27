@@ -1,0 +1,139 @@
+name: "Platform Foundation Pipeline"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/environments/logging/**"
+      - "terraform/environments/security/**"
+      - "terraform/environments/shared-services/**"
+      - "terraform/environments/management/**"
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: "Which layer to deploy"
+        required: true
+        default: all
+        type: choice
+        options: [all, management, logging, security, shared-services]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-management:
+    name: "Deploy — Management (Org + SCPs)"
+    runs-on: ubuntu-24.04
+    environment: management
+    concurrency:
+      group: terraform-management
+      cancel-in-progress: false
+    if: |
+      github.event.inputs.layer == 'management' ||
+      github.event.inputs.layer == 'all' ||
+      github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_MANAGEMENT }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Foundation-management-${{ github.run_id }}
+
+      - name: Terraform Init + Apply — Management
+        working-directory: terraform/environments/management
+        run: |
+          terraform init -input=false
+          terraform apply -var-file=terraform.tfvars -auto-approve -input=false
+
+  deploy-logging:
+    name: "Deploy — Logging (CloudTrail + Config)"
+    runs-on: ubuntu-24.04
+    environment: logging
+    needs: [deploy-management]
+    concurrency:
+      group: terraform-logging
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_LOGGING }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Foundation-logging-${{ github.run_id }}
+
+      - name: Terraform Init + Apply — Logging
+        working-directory: terraform/environments/logging
+        run: |
+          terraform init -input=false
+          terraform apply -var-file=terraform.tfvars -auto-approve -input=false
+
+  deploy-security:
+    name: "Deploy — Security (Security Hub + GuardDuty + IAM IC)"
+    runs-on: ubuntu-24.04
+    environment: security-account
+    needs: [deploy-logging]
+    concurrency:
+      group: terraform-security
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_SECURITY }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Foundation-security-${{ github.run_id }}
+
+      - name: Terraform Init + Apply — Security
+        working-directory: terraform/environments/security
+        run: |
+          terraform init -input=false
+          terraform apply -var-file=terraform.tfvars -auto-approve -input=false
+
+  deploy-shared-services:
+    name: "Deploy — Shared Services (ECR + Route53 + TGW)"
+    runs-on: ubuntu-24.04
+    environment: shared-services
+    needs: [deploy-security]
+    concurrency:
+      group: terraform-shared-services
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_SHARED_SERVICES }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Foundation-shared-${{ github.run_id }}
+
+      - name: Terraform Init + Apply — Shared Services
+        working-directory: terraform/environments/shared-services
+        run: |
+          terraform init -input=false
+          terraform apply -var-file=terraform.tfvars -auto-approve -input=false

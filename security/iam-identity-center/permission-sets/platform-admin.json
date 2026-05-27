@@ -1,0 +1,19 @@
+{
+  "Name": "PlatformAdmin",
+  "Description": "Full administrative access for platform engineers",
+  "SessionDuration": "PT4H",
+  "ManagedPolicies": [
+    "arn:aws:iam::aws:policy/AdministratorAccess"
+  ],
+  "InlinePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DenyBillingModification",
+        "Effect": "Deny",
+        "Action": ["aws-portal:ModifyBilling", "aws-portal:ModifyPaymentMethods"],
+        "Resource": "*"
+      }
+    ]
+  }
+}

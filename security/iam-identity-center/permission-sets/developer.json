@@ -1,0 +1,25 @@
+{
+  "Name": "Developer",
+  "Description": "Developer access — all app services, no IAM/Org modifications",
+  "SessionDuration": "PT8H",
+  "ManagedPolicies": [
+    "arn:aws:iam::aws:policy/PowerUserAccess"
+  ],
+  "InlinePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DenyIAMOrgModification",
+        "Effect": "Deny",
+        "Action": [
+          "iam:CreateUser", "iam:DeleteUser", "iam:UpdateUser",
+          "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+          "iam:CreateRole", "iam:DeleteRole",
+          "iam:PutRolePolicy", "iam:DeleteRolePolicy",
+          "organizations:*"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+}

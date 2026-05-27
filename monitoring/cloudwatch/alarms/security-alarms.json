@@ -1,0 +1,30 @@
+{
+  "alarms": [
+    {
+      "AlarmName": "cap-${environment}-unauthorized-api-calls",
+      "AlarmDescription": "Alert on 5+ unauthorized API calls in 5 minutes",
+      "MetricName": "UnauthorizedAttemptCount",
+      "Namespace": "CloudTrailMetrics",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 1,
+      "Threshold": 5,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching",
+      "AlarmActions": ["arn:aws:sns:us-east-1:ACCOUNT_ID:cap-${environment}-security-alerts"]
+    },
+    {
+      "AlarmName": "cap-${environment}-root-account-login",
+      "AlarmDescription": "Alert on any root account login",
+      "MetricName": "RootAccountUsageCount",
+      "Namespace": "CloudTrailMetrics",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 1,
+      "Threshold": 1,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching",
+      "AlarmActions": ["arn:aws:sns:us-east-1:ACCOUNT_ID:cap-${environment}-security-alerts"]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+aws_region                 = "us-east-1"
+shared_services_account_id = "777777777777"
+cost_center                = "platform"
+ecr_repository_names       = ["api-service", "worker", "admin-ui", "data-processor"]
+internal_domain            = "cap.internal"
+public_domain              = "example.com"

@@ -1,0 +1,117 @@
+name: "04 - Container Security"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/Dockerfile"
+      - "**/docker-compose*.yml"
+  pull_request:
+    paths:
+      - "**/Dockerfile"
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+  packages: write
+
+jobs:
+  hadolint:
+    name: "Dockerfile Lint"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: "**/Dockerfile"
+          recursive: true
+          format: sarif
+          output-file: hadolint-results.sarif
+          ignore: DL3008,DL3009,DL3018
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint-results.sarif
+          category: hadolint
+
+  build-scan-push:
+    name: "Build, Scan & Push — ${{ matrix.image }}"
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        include:
+          - image: api-service
+            dockerfile: ecs/task-definitions/api.Dockerfile
+          - image: worker
+            dockerfile: ecs/task-definitions/worker.Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.IMAGE_PUSH_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-ImagePush-${{ github.run_id }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        id: build
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          IMAGE_URI=${{ steps.ecr-login.outputs.registry }}/cap-shared-${{ matrix.image }}:${IMAGE_TAG}
+          docker build \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t ${IMAGE_URI} \
+            -f ${{ matrix.dockerfile }} .
+          echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.build.outputs.image_uri }}
+          format: sarif
+          output: trivy-image-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          ignore-unfixed: true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image-results.sarif
+          category: trivy-image-${{ matrix.image }}
+
+      - name: Generate SBOM for image
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+          syft ${{ steps.build.outputs.image_uri }} \
+            --output spdx-json=sbom-image-${{ matrix.image }}.spdx.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Push image
+        run: docker push ${{ steps.build.outputs.image_uri }}
+
+      - name: Sign image with cosign (keyless)
+        run: |
+          cosign sign --yes ${{ steps.build.outputs.image_uri }}
+
+      - name: Attach SBOM attestation
+        run: |
+          cosign attest --yes \
+            --predicate sbom-image-${{ matrix.image }}.spdx.json \
+            --type spdxjson \
+            ${{ steps.build.outputs.image_uri }}

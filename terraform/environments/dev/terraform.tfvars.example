@@ -1,0 +1,15 @@
+aws_region             = "us-east-1"
+account_id             = "000000000000"
+cost_center            = "engineering"
+vpc_cidr               = "10.10.0.0/16"
+az_count               = 3
+waf_rate_limit         = 2000
+eks_cluster_version    = "1.30"
+rds_instance_class     = "db.t3.medium"
+rds_allocated_storage  = 20
+ops_sns_topic_arn      = "arn:aws:sns:us-east-1:000000000000:cap-dev-ops-alerts"
+
+eks_node_groups = {
+  system = { instance_type = "t3.large", min_size = 2, max_size = 4, desired_size = 2 }
+  general = { instance_type = "m5.xlarge", min_size = 2, max_size = 10, desired_size = 3 }
+}

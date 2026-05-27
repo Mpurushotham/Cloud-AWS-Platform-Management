@@ -1,0 +1,8 @@
+aws_region            = "us-east-1"
+security_account_id   = "222222222222"
+cost_center           = "security"
+member_account_ids    = ["444444444444", "555555555555", "666666666666"]
+logging_s3_bucket_arn = "arn:aws:s3:::cap-logging-audit-logs"
+security_sns_endpoint = "https://events.pagerduty.com/integration/xxx/enqueue"
+sso_instance_arn      = "arn:aws:sso:::instance/ssoins-xxxxxxxxxxxxxxxx"
+sso_identity_store_id = "d-xxxxxxxxxx"

@@ -1,0 +1,9 @@
+{
+  "service_name": "my-api-service",
+  "team": "team-a",
+  "environment": ["dev", "staging", "prod"],
+  "runtime": ["python3.12", "nodejs20", "java21"],
+  "database": ["none", "postgres", "dynamodb"],
+  "include_queue": ["no", "yes"],
+  "owner_email": "team@example.com"
+}

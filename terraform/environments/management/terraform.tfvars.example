@@ -1,0 +1,16 @@
+aws_region            = "us-east-1"
+org_domain            = "example.com"
+management_account_id = "111111111111"
+cost_center           = "platform"
+allowed_regions       = ["us-east-1", "us-west-2"]
+
+account_emails = {
+  landing_zone    = "aws-landing-zone@example.com"
+  security        = "aws-security@example.com"
+  logging         = "aws-logging@example.com"
+  shared_services = "aws-shared@example.com"
+  dev             = "aws-dev@example.com"
+  staging         = "aws-staging@example.com"
+  prod            = "aws-prod@example.com"
+  sandbox         = "aws-sandbox@example.com"
+}
