@@ -1,5 +1,7 @@
 # New Team Onboarding Guide
 
+> **Navigation:** [Docs Index](../README.md) | [Add a New Service](../how-to/add-new-service.md) | [K8s Workloads](../how-to/kubernetes-workloads.md) | [CI/CD Pipeline](../how-to/ci-cd-pipeline.md)
+
 ## Welcome to CAP (Cloud-AWS-Platform)
 
 This guide gets your team from zero to deploying on the platform in one day.
@@ -81,3 +83,16 @@ cd cdk && npx cdk deploy --context environment=dev
 | Security concern | #security-team Slack |
 | Architecture advice | platform-team office hours (Tues/Thurs 2pm) |
 | Incidents | PagerDuty: cap-platform-engineering |
+
+---
+
+## Next Steps After Your First Deploy
+
+| Task | Guide |
+|------|-------|
+| Pipeline failing? | [CI/CD Pipeline Guide](../how-to/ci-cd-pipeline.md) |
+| Kubernetes pod won't start? | [Kubernetes Workloads Guide](../how-to/kubernetes-workloads.md) |
+| Need to store a secret? | [Secrets and Rotation Guide](../how-to/secrets-and-rotation.md) |
+| Want to add monitoring? | [Observability Setup Guide](../how-to/observability-setup.md) |
+| ECS vs EKS question? | [Compute Selection Guide](../when-to-use/compute-selection.md) |
+| Promote to staging/prod? | [CI/CD Pipeline Guide — Terraform Apply](../how-to/ci-cd-pipeline.md#08-terraform-applyyml--terraform-apply-with-environment-gates) |

@@ -1,5 +1,8 @@
 # Architecture Overview
 
+> **Navigation:** [Docs Index](../README.md) | [Decision Guide](decision-guide.md) | [IaC Selection](../when-to-use/iac-selection.md) | [Compute Selection](../when-to-use/compute-selection.md)
+
+
 ## Multi-Account Organization Structure
 
 ```
@@ -71,3 +74,13 @@ Layer 9: Falco (container runtime threat detection)
 Layer 10: AWS Config (continuous compliance, drift detection)
 Layer 11: CloudTrail (audit trail, all API calls)
 ```
+
+---
+
+## Related Documentation
+
+- **Getting started:** [How to Bootstrap the Platform](../how-to/bootstrap-platform.md)
+- **Adding workloads:** [How to Add a New Service](../how-to/add-new-service.md)
+- **Tool selection:** [IaC Selection Guide](../when-to-use/iac-selection.md) | [Compute Selection](../when-to-use/compute-selection.md) | [Storage Selection](../when-to-use/storage-selection.md)
+- **Compliance:** [SOC 2 Controls](../compliance/soc2-controls.md) | [PCI-DSS Guide](../compliance/pci-dss-guide.md)
+- **Why these choices:** [Architecture Decision Guide](decision-guide.md)
