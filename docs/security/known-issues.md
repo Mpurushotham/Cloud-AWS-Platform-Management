@@ -173,6 +173,56 @@ the guard reported it — it had no way to see itself.
 
 ---
 
+## OPEN — environments pass 68 arguments that the stub modules never declare
+
+**Severity:** blocking for `terraform/environments/**`
+
+Most modules under `terraform/modules/` are unimplemented placeholders. They
+declare a handful of variables and create no resources. The environment stacks,
+however, call them with a full argument list:
+
+```hcl
+module "vpc_endpoints" {
+  source      = "../../modules/vpc-endpoints"
+  vpc_id      = module.vpc.vpc_id       # not declared by the module
+  subnet_ids  = module.vpc.isolated_subnet_ids
+  vpc_cidr    = var.vpc_cidr
+  environment = "dev"
+  project     = "cap"                   # the only variable that exists
+}
+```
+
+Terraform rejects an argument a module does not declare, so every affected
+environment fails at `terraform validate` — before any provider or credential is
+involved.
+
+Counted after the HCL parse fixes: **68 undeclared arguments across 11 modules**
+(`acm`, `aws-config`, `cloudwatch`, `control-tower`, `ecs`,
+`iam-identity-center`, `route53`, `s3`, `security-groups`, `transit-gateway`,
+`vpc-endpoints`).
+
+This is why the `Plan — dev/staging/prod` checks cannot pass, and it is a
+separate problem from the missing member accounts: even with the accounts, the
+configuration would not validate.
+
+**Not fixed here, deliberately.** Two wrong ways to make the symptom disappear:
+
+- Deleting the arguments from the environments — discards the intended design.
+- Deleting the unused variables from the modules — was attempted and reverted;
+  it removes the documented interface and increases the mismatch, because the
+  callers pass *more* than the modules declare, not less.
+
+The correct fix is to implement each module's variable set to match what its
+callers pass, module by module, with the resources to use them. That is
+substantial work and belongs in its own change.
+
+**Consequence for CI:** TFLint runs with `--minimum-failure-severity=error`, so
+the `terraform_unused_declarations` warnings on placeholder modules surface
+without blocking. Raise it back to warning severity once the modules are
+implemented.
+
+---
+
 ## OPEN — the sample API is unauthenticated
 
 **Severity:** accepted for the lab

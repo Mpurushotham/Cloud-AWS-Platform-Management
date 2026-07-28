@@ -23,10 +23,15 @@ jobs:
       new_release_git_tag: ${{ steps.release.outputs.new_release_git_tag }}
 
     steps:
+      # SEMANTIC_RELEASE_TOKEN is a PAT, needed only when semantic-release must
+      # push commits (changelog, version bump) to a branch protected against the
+      # default GITHUB_TOKEN. Falling back keeps releases working without it
+      # rather than failing checkout outright with "Input required and not
+      # supplied: token".
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -45,7 +50,7 @@ jobs:
         id: release
         run: npx semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
   sbom-attestation:
     name: "SBOM & Attestation"

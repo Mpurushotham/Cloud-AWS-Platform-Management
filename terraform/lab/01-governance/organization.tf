@@ -27,6 +27,3 @@ resource "aws_organizations_organization" "this" {
   }
 }
 
-data "aws_organizations_organization" "current" {
-  depends_on = [aws_organizations_organization.this]
-}

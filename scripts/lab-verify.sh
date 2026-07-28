@@ -7,6 +7,12 @@
 
 set -uo pipefail
 
+# SC2016: this script deliberately uses single quotes for two kinds of literal
+# that must NOT be expanded by the shell -- JMESPath expressions containing
+# backticks (--query 'Roles[?starts_with(RoleName,`cap-`)]') and dollar amounts
+# in output ('$0.01'). Expanding either would break the query or corrupt the text.
+# shellcheck disable=SC2016
+
 REGION="${AWS_REGION:-us-east-1}"
 billable=0
 missing=0
