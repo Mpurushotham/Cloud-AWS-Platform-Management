@@ -16,18 +16,16 @@ permissions:
 
 jobs:
   prowler:
-    name: "Prowler — ${{ matrix.env }}"
+    name: "Prowler — ${{ matrix.account }}"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
-          - env: management
-            account_id: "111111111111"
-          - env: security
-            account_id: "222222222222"
-          - env: prod
-            account_id: "333333333333"
+          # Single-account lab today. Add an entry per member account once the
+          # multi-account landing zone exists; the placeholder account IDs that
+          # were here referred to accounts that have never existed.
+          - account: lab
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -35,9 +33,9 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
-          role-to-assume: ${{ vars.PROWLER_ROLE_ARN }}
-          aws-region: us-east-1
-          role-session-name: GitHubActions-Prowler-${{ matrix.env }}-${{ github.run_id }}
+          role-to-assume: ${{ vars.AWS_PROWLER_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-Prowler-${{ matrix.account }}-${{ github.run_id }}
 
       - name: Install Prowler
         run: pip install prowler
@@ -47,7 +45,7 @@ jobs:
           prowler aws \
             --compliance cis_aws_1.4 \
             --output-formats sarif,html,csv \
-            --output-filename prowler-cis-${{ matrix.env }} \
+            --output-filename prowler-cis-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
 
@@ -56,7 +54,7 @@ jobs:
           prowler aws \
             --compliance aws_foundational_security_best_practices_aws \
             --output-formats sarif \
-            --output-filename prowler-fsbp-${{ matrix.env }} \
+            --output-filename prowler-fsbp-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
 
@@ -65,21 +63,21 @@ jobs:
           prowler aws \
             --compliance pci_dss_3.2.1_aws \
             --output-formats sarif \
-            --output-filename prowler-pci-${{ matrix.env }} \
+            --output-filename prowler-pci-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
 
       - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
-          sarif_file: prowler-results/prowler-cis-${{ matrix.env }}.sarif.json
-          category: prowler-${{ matrix.env }}
+          sarif_file: prowler-results/prowler-cis-${{ matrix.account }}.sarif.json
+          category: prowler-${{ matrix.account }}
 
       - name: Upload compliance reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: prowler-${{ matrix.env }}-${{ github.run_id }}
+          name: prowler-${{ matrix.account }}-${{ github.run_id }}
           path: prowler-results/
           retention-days: 90
 
@@ -101,17 +99,17 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
-          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.env))] }}
-          aws-region: us-east-1
-          role-session-name: GitHubActions-Drift-${{ matrix.env }}-${{ github.run_id }}
+          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.account))] }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-Drift-${{ matrix.account }}-${{ github.run_id }}
 
       - name: Terraform init
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform/environments/${{ matrix.account }}
         run: terraform init -input=false
 
       - name: Terraform plan (drift check)
         id: plan
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform/environments/${{ matrix.account }}
         run: |
           terraform plan \
             -var-file=terraform.tfvars \
@@ -123,7 +121,7 @@ jobs:
       - name: Alert on drift
         if: steps.plan.outputs.exitcode == '2'
         run: |
-          echo "::error::DRIFT DETECTED in ${{ matrix.env }} environment!"
+          echo "::error::DRIFT DETECTED in ${{ matrix.account }} environment!"
           echo "Review plan output above for resource changes."
           cat plan-output.txt
           exit 1

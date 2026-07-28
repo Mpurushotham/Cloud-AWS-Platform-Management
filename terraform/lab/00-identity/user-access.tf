@@ -73,7 +73,25 @@ data "aws_iam_policy_document" "assume_platform_admin" {
       "iam:ListVirtualMFADevices",
       "iam:ListAccountAliases",
       "iam:GetAccountPasswordPolicy",
+      "iam:ListGroupsForUser",
+      "iam:ListAttachedUserPolicies",
       "sts:GetCallerIdentity",
+    ]
+    resources = ["*"]
+  }
+
+  # `aws login` (AWS CLI 2.32+) exchanges a console session for temporary
+  # credentials through this action, and refreshes them the same way. Without
+  # it the user can sign in to the console but the CLI fails with
+  # "Unable to create or refresh login credentials ... missing permission for
+  # the 'signin:CreateOAuth2Token' action" -- which is how stripping the user's
+  # standing privileges first broke CLI access entirely.
+  statement {
+    sid    = "UseAwsLogin"
+    effect = "Allow"
+    actions = [
+      "signin:CreateOAuth2Token",
+      "signin:ListTrustedDevices",
     ]
     resources = ["*"]
   }
