@@ -3,8 +3,17 @@ name: "08 - Terraform Apply"
 on:
   push:
     branches: [main]
+    # Scoped to the code this workflow actually applies. "terraform/**" also
+    # matched terraform/lab/** and terraform/bootstrap/**, so a lab-only or
+    # docs-adjacent change triggered an apply against dev, staging and prod --
+    # environments whose Terraform provisions EKS, NAT gateways and RDS.
+    #
+    # The lab has its own lifecycle (terraform/lab/README.md) and is applied
+    # deliberately, not on merge. Bootstrap is run once, by hand, with elevated
+    # credentials.
     paths:
-      - "terraform/**"
+      - "terraform/environments/**"
+      - "terraform/modules/**"
 
 permissions:
   contents: read

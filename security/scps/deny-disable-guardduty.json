@@ -16,7 +16,8 @@
         "ArnNotLike": {
           "aws:PrincipalArn": [
             "arn:aws:iam::*:role/AWSControlTowerExecution",
-            "arn:aws:iam::*:role/cap-apply"
+            "arn:aws:iam::*:role/cap-apply",
+            "arn:aws:iam::*:role/cap-platform-admin"
           ]
         }
       }

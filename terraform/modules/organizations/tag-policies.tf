@@ -6,17 +6,17 @@ resource "aws_organizations_policy" "tag_policy" {
   content = jsonencode({
     tags = {
       Project = {
-        tag_key = { "@@assign" = "Project" }
-        tag_value = { "@@assign" = ["cap"] }
+        tag_key      = { "@@assign" = "Project" }
+        tag_value    = { "@@assign" = ["cap"] }
         enforced_for = { "@@assign" = ["ec2:instance", "s3:bucket", "rds:db", "eks:cluster", "ecs:cluster"] }
       }
       Environment = {
-        tag_key = { "@@assign" = "Environment" }
-        tag_value = { "@@assign" = ["dev", "staging", "prod", "sandbox", "shared", "security", "logging", "management"] }
+        tag_key      = { "@@assign" = "Environment" }
+        tag_value    = { "@@assign" = ["dev", "staging", "prod", "sandbox", "shared", "security", "logging", "management"] }
         enforced_for = { "@@assign" = ["ec2:instance", "s3:bucket", "rds:db"] }
       }
       ManagedBy = {
-        tag_key = { "@@assign" = "ManagedBy" }
+        tag_key   = { "@@assign" = "ManagedBy" }
         tag_value = { "@@assign" = ["terraform", "aws-cdk", "manual"] }
       }
     }

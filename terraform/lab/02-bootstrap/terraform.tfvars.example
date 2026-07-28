@@ -1,0 +1,18 @@
+aws_region  = "us-east-1"
+cost_center = "lab"
+owner_team  = "platform-team"
+
+github_org   = "your-github-username-or-org"
+github_repo  = "Cloud-AWS-Platform-Management"
+apply_branch = "main"
+
+# Leave null to derive cap-lab-tfstate-<account-id>.
+state_bucket_name     = null
+state_lock_table_name = "cap-lab-terraform-state-lock"
+
+# From: terraform -chdir=../01-governance output -raw access_logs_bucket_name
+access_log_bucket_name = "cap-lab-access-logs-111111111111"
+
+# AES256 keeps the lab at $0. Use "aws:kms" in production ($1/month per key).
+state_encryption     = "AES256"
+create_oidc_provider = true

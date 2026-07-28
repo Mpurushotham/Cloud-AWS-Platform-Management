@@ -83,9 +83,9 @@ module "rds" {
 }
 
 module "cloudwatch" {
-  source      = "../../modules/cloudwatch"
-  project     = "cap"
-  environment = "prod"
-  kms_key_arn = module.kms.key_arns["cloudwatch"]
+  source        = "../../modules/cloudwatch"
+  project       = "cap"
+  environment   = "prod"
+  kms_key_arn   = module.kms.key_arns["cloudwatch"]
   alarm_actions = [var.ops_sns_topic_arn]
 }

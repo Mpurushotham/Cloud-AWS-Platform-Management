@@ -14,10 +14,10 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   parameter_group_name   = aws_db_parameter_group.main.name
 
-  multi_az               = var.environment == "prod" ? true : false
-  publicly_accessible    = false
-  deletion_protection    = var.environment == "prod" ? true : false
-  skip_final_snapshot    = var.environment != "prod"
+  multi_az                  = var.environment == "prod" ? true : false
+  publicly_accessible       = false
+  deletion_protection       = var.environment == "prod" ? true : false
+  skip_final_snapshot       = var.environment != "prod"
   final_snapshot_identifier = var.environment == "prod" ? "${var.project}-${var.environment}-final-snapshot" : null
 
   backup_retention_period = var.environment == "prod" ? 35 : 7
@@ -43,7 +43,7 @@ resource "aws_db_instance" "main" {
 resource "aws_iam_role" "enhanced_monitoring" {
   name = "${var.project}-${var.environment}-rds-monitoring-role"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Principal = { Service = "monitoring.rds.amazonaws.com" }, Action = "sts:AssumeRole" }]
   })
 }

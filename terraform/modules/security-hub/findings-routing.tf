@@ -12,8 +12,8 @@ resource "aws_cloudwatch_event_rule" "critical_findings" {
     "detail-type" = ["Security Hub Findings - Imported"]
     detail = {
       findings = {
-        Severity = { Label = ["CRITICAL", "HIGH"] }
-        Workflow  = { Status = ["NEW"] }
+        Severity    = { Label = ["CRITICAL", "HIGH"] }
+        Workflow    = { Status = ["NEW"] }
         RecordState = ["ACTIVE"]
       }
     }

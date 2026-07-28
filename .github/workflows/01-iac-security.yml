@@ -8,6 +8,10 @@ on:
       - "conftest.rego"
       - ".checkov.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
@@ -21,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@v12.3113.0
         with:
           directory: terraform/
           config_file: .checkov.yml

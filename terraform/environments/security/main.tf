@@ -25,10 +25,10 @@ module "security_hub" {
 }
 
 module "guardduty" {
-  source                    = "../../modules/guardduty"
-  member_account_emails     = var.member_account_emails
-  finding_s3_bucket_arn     = var.logging_s3_bucket_arn
-  kms_key_arn               = module.kms.key_arns["guardduty"]
+  source                = "../../modules/guardduty"
+  member_account_emails = var.member_account_emails
+  finding_s3_bucket_arn = var.logging_s3_bucket_arn
+  kms_key_arn           = module.kms.key_arns["guardduty"]
 }
 
 module "iam_identity_center" {

@@ -1,0 +1,71 @@
+{
+  "$comment": [
+    "AWS Labs MCP servers for this repository. See docs/mcp/README.md.",
+    "",
+    "Deliberately small. AWS's own guidance is that overlapping tools confuse",
+    "agents and reduce performance, and every server's tools occupy context in",
+    "every request. Five servers is roughly 40-60 tools; adding all 61 available",
+    "servers would be several hundred and would measurably degrade results.",
+    "",
+    "The managed AWS MCP Server is NOT listed here on purpose -- install it as a",
+    "plugin instead (see the docs). Running it alongside aws-api-mcp-server or",
+    "aws-knowledge-mcp-server is the specific overlap AWS warns against.",
+    "",
+    "AWS_PROFILE defaults to 'default' but honours your shell. Once the identity",
+    "cutover is complete, export AWS_PROFILE=cap-lab so these servers act as",
+    "cap-platform-admin rather than as root."
+  ],
+
+  "mcpServers": {
+    "aws-pricing": {
+      "command": "uvx",
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+
+    "aws-iac": {
+      "command": "uvx",
+      "args": ["awslabs.aws-iac-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+
+    "cloudwatch": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+
+    "dynamodb": {
+      "command": "uvx",
+      "args": ["awslabs.dynamodb-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "DDB-MCP-READONLY": "true",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+
+    "well-architected-security": {
+      "command": "uvx",
+      "args": ["awslabs.well-architected-security-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    }
+  }
+}

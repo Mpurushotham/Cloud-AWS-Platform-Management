@@ -9,4 +9,8 @@ locals {
   }
 }
 
-variable "project" { description = "Project name prefix"; type = string; default = "cap" }
+variable "project" {
+  description = "Project name prefix"
+  type        = string
+  default     = "cap"
+}
