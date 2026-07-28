@@ -43,7 +43,7 @@ jobs:
       - name: Run Prowler — CIS AWS Foundations 1.4
         run: |
           prowler aws \
-            --compliance cis_aws_1.4 \
+            --compliance cis_1.4_aws \
             --output-formats sarif,html,csv \
             --output-filename prowler-cis-${{ matrix.account }} \
             --output-directory prowler-results/ \
@@ -61,7 +61,7 @@ jobs:
       - name: Run Prowler — PCI-DSS 3.2.1
         run: |
           prowler aws \
-            --compliance pci_dss_3.2.1_aws \
+            --compliance pci_3.2.1_aws \
             --output-formats sarif \
             --output-filename prowler-pci-${{ matrix.account }} \
             --output-directory prowler-results/ \
@@ -87,7 +87,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [dev, staging, prod]
+        # The lab layers are the deployed ones. terraform/environments/*
+        # cannot init -- their backend bucket does not exist and they pass
+        # arguments the stub modules never declare. Add them here once those
+        # modules are implemented.
+        env: [00-identity, 01-governance, 02-bootstrap, 03-network, 04-workload]
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -104,15 +108,18 @@ jobs:
           role-session-name: GitHubActions-Drift-${{ matrix.env }}-${{ github.run_id }}
 
       - name: Terraform init
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform/lab/${{ matrix.env }}
         run: terraform init -input=false
 
       - name: Terraform plan (drift check)
         id: plan
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform/lab/${{ matrix.env }}
         run: |
+          varfile=""
+          [ -f terraform.tfvars ] && varfile="-var-file=terraform.tfvars"
+          # shellcheck disable=SC2086
           terraform plan \
-            -var-file=terraform.tfvars \
+            $varfile \
             -detailed-exitcode \
             -input=false \
             -no-color 2>&1 | tee plan-output.txt
