@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.4...v1.0.5) (2026-07-28)
+
+### Bug Fixes
+
+* **ci:** prowler no longer emits sarif for the aws provider ([c469b3a](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/c469b3a90d3df57b00cfaff88084d13502f8a86f))
+
 ## [1.0.4](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.3...v1.0.4) (2026-07-28)
 
 ### Bug Fixes
