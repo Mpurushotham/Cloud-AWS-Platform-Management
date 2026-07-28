@@ -1,3 +1,9 @@
+## [1.0.4](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.3...v1.0.4) (2026-07-28)
+
+### Bug Fixes
+
+* **ci:** prowler output formats are space-separated ([a46f23e](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/a46f23e5079800a63c17c2e8d130a81fac374594))
+
 ## [1.0.3](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.2...v1.0.3) (2026-07-28)
 
 ### Bug Fixes
