@@ -137,6 +137,42 @@ entirely requires a bucket policy per bucket, not an SCP.
 
 ---
 
+## FIXED — the cost guard was the only thing costing money
+
+**Severity:** low in absolute terms, instructive out of proportion to the amount
+
+`scripts/lab-verify.sh` called `aws ce get-cost-and-usage` to report
+month-to-date spend. The **Cost Explorer API bills $0.01 per request**.
+
+Month-to-date spend on the lab account, broken down:
+
+| Service | Cost |
+|---------|------|
+| AWS Cost Explorer | **$0.02** |
+| DynamoDB | $0.00000175 |
+| S3 | $0.0000007028 |
+| CloudTrail, Lambda, API Gateway, KMS, SNS, CloudWatch | $0 |
+
+Every deployed resource together came to less than a thousandth of a cent. The
+only measurable charge was the script asserting that nothing was charging.
+
+Worse, `10-lab-cost-guard.yml` runs that script on a daily schedule and on every
+pull request touching `terraform/lab/`, so it would have accrued roughly
+**$0.30/month and rising** — making the cost guard the largest line item in a
+lab budgeted at $0, and the direct cause of the drift it exists to detect.
+
+**Fixed:** the Cost Explorer query is now opt-in behind
+`LAB_VERIFY_COST_QUERY=1` and skipped by default. The budget alarms from layer
+01 already provide the real guardrail — they notify at 10% actual and 100%
+forecast and cost nothing per evaluation.
+
+**The general lesson:** a monitoring control is part of the system it monitors,
+and its own cost, permissions and failure modes count. This one was found only
+because the account was checked *after* the guard had been running, not because
+the guard reported it — it had no way to see itself.
+
+---
+
 ## OPEN — the sample API is unauthenticated
 
 **Severity:** accepted for the lab

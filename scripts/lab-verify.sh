@@ -127,12 +127,27 @@ else
 fi
 
 section 'Month-to-date spend'
-start="$(date -u +%Y-%m-01)"
-end="$(date -u -v+1d +%Y-%m-%d 2>/dev/null || date -u -d '+1 day' +%Y-%m-%d)"
-cost="$(aws ce get-cost-and-usage --time-period "Start=$start,End=$end" \
-  --granularity MONTHLY --metrics UnblendedCost \
-  --query 'ResultsByTime[0].Total.UnblendedCost.Amount' --output text 2>/dev/null)"
-printf '  MTD unblended cost: $%s\n' "${cost:-unknown}"
+# The Cost Explorer API bills $0.01 per GetCostAndUsage request. Running this
+# check daily from CI would cost roughly $0.30/month -- which would make this
+# script the single largest expense in a lab budgeted at $0, and the cost
+# guard itself the thing causing the drift it exists to detect.
+#
+# So it is opt-in. The budget alarms configured in layer 01 already cover the
+# actual guardrail: they notify at 10% actual and 100% forecast without any
+# per-request charge.
+if [[ "${LAB_VERIFY_COST_QUERY:-0}" == "1" ]]; then
+  start="$(date -u +%Y-%m-01)"
+  end="$(date -u -v+1d +%Y-%m-%d 2>/dev/null || date -u -d '+1 day' +%Y-%m-%d)"
+  cost="$(aws ce get-cost-and-usage --time-period "Start=$start,End=$end" \
+    --granularity MONTHLY --metrics UnblendedCost \
+    --query 'ResultsByTime[0].Total.UnblendedCost.Amount' --output text 2>/dev/null)"
+  printf '  MTD unblended cost: $%s\n' "${cost:-unknown}"
+  printf '  \033[33mnote\033[0m  this query cost $0.01 (Cost Explorer API)\n'
+else
+  printf '  skipped — Cost Explorer bills $0.01 per request.\n'
+  printf '  Set LAB_VERIFY_COST_QUERY=1 to include it, or read it free in the console:\n'
+  printf '  https://console.aws.amazon.com/costmanagement/home#/cost-explorer\n'
+fi
 
 section 'Result'
 if (( billable )); then
