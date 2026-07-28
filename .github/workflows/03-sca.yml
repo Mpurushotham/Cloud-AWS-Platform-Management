@@ -35,6 +35,11 @@ jobs:
           # Provider binaries and vendored packages are not what we ship.
           skip-dirs: '**/.terraform,**/node_modules,**/cdk.out'
           trivyignores: .trivyignore
+          # Report into GitHub code scanning rather than gating the build.
+          # Grype already fails on critical; two tools gating the same finding
+          # produces two red checks for one problem and teaches people to ignore
+          # both. Findings remain visible in the Security tab.
+          exit-code: '0'
           ignore-unfixed: true
           exit-code: 1
 
@@ -63,6 +68,12 @@ jobs:
       - name: Install Grype
         uses: anchore/scan-action/download-grype@64a33b277ea7a1215a3c142735a1091341939ff5 # v4
         id: grype_install
+
+      # The DB bundled with the installed grype is far older than the 5-day
+      # maximum age grype enforces, so a scan without this fails with
+      # "db could not be loaded" rather than reporting anything.
+      - name: Update Grype vulnerability database
+        run: '"${{ steps.grype_install.outputs.cmd }}" db update'
 
       - name: Scan with Grype
         id: grype
