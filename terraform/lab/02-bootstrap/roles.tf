@@ -299,4 +299,22 @@ data "aws_iam_policy_document" "prowler_additional" {
     ]
     resources = ["*"]
   }
+
+  # Cost and budget reads. Neither SecurityAudit nor ViewOnlyAccess grants
+  # these, so without this statement scripts/lab-verify.sh reports the budget
+  # as missing and the month-to-date spend as unknown when it runs in CI --
+  # which is exactly the check the cost guard exists to perform.
+  statement {
+    sid    = "ReadCostAndBudgets"
+    effect = "Allow"
+    actions = [
+      "budgets:ViewBudget",
+      "budgets:Describe*",
+      "ce:GetCostAndUsage",
+      "ce:GetCostForecast",
+      "ce:GetDimensionValues",
+      "freetier:Get*",
+    ]
+    resources = ["*"]
+  }
 }
