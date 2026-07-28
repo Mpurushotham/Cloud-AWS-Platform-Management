@@ -370,3 +370,45 @@ is most dangerous in its first days, before anyone has looked at it.
 
 The SAST job runs with `--severity=ERROR`, so warnings surface in the SARIF
 report without blocking a merge. There are currently **zero** ERROR findings.
+
+---
+
+## FIXED — a pinned action was itself on a compromised version
+
+**Severity:** critical
+
+Pinning actions to commit SHAs (above) removed the mutable-tag risk but
+introduced a subtler one: **a SHA pins you to a specific version, including a bad
+one.** `aquasecurity/trivy-action` was pinned to `v0.33.1`, and
+[GHSA-69fq-xp46-6x23](https://github.com/advisories/GHSA-69fq-xp46-6x23) —
+*"Trivy ecosystem supply chain was briefly compromised"*, severity **critical** —
+affects everything below `0.35.0`.
+
+So the pin was durable and wrong, and would have stayed wrong indefinitely
+because a SHA never moves.
+
+**Fixed:** repinned to `v0.36.0`. Note that `0.69.4` is also affected with no
+patched release, so "newest" is not automatically safe either.
+
+**The lesson:** SHA pinning and vulnerability scanning are complements, not
+alternatives. Pinning makes the supply chain deterministic; only scanning tells
+you whether what you pinned is any good. This was caught by Dependabot's alert
+on the repository, not by the pinning exercise that created it.
+
+---
+
+## FIXED — conftest policies did not parse
+
+`conftest.rego` used Rego v0 partial-set syntax:
+
+```rego
+deny[msg] if { ... }
+```
+
+Modern OPA requires `contains` for a partial set rule. Converting all 12 rules to
+`deny contains msg if { ... }` then produced a *different* error —
+`var cannot be used for rule name` — because the file imported
+`future.keywords.if` and `future.keywords.in` but **not**
+`future.keywords.contains`.
+
+**Fixed:** added the missing import. `conftest verify` (OPA 1.15.2) passes.
