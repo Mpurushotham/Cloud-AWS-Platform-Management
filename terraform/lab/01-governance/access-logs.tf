@@ -52,6 +52,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
     noncurrent_version_expiration {
       noncurrent_days = 7
     }
+
+    # Failed multipart uploads are otherwise retained and billed indefinitely,
+    # invisible to a normal bucket listing.
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 

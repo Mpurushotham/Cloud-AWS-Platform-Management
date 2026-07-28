@@ -41,6 +41,14 @@ resource "aws_lambda_function" "api" {
     mode = "Active"
   }
 
+  # Asynchronous invocations that exhaust their retries are otherwise dropped
+  # silently. Routing them to the existing alarm topic costs nothing and means
+  # a failure is visible rather than invisible. Synchronous API Gateway calls
+  # do not use this path, but scheduled or event-driven invocations would.
+  dead_letter_config {
+    target_arn = aws_sns_topic.alarms.arn
+  }
+
   # The log group must exist before the first invocation, otherwise Lambda
   # creates it with no retention policy and logs are kept forever.
   depends_on = [aws_cloudwatch_log_group.lambda]
@@ -112,11 +120,21 @@ data "aws_iam_policy_document" "lambda" {
     resources = [aws_dynamodb_table.items.arn]
   }
 
+  # X-Ray's write APIs do not support resource-level permissions, so "*" is the
+  # only expressible resource. The actions themselves are write-only and cannot
+  # read trace data.
   statement {
     sid       = "EmitTraces"
     effect    = "Allow"
     actions   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"]
     resources = ["*"]
+  }
+
+  statement {
+    sid       = "PublishToDeadLetterTopic"
+    effect    = "Allow"
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.alarms.arn]
   }
 }
 

@@ -79,9 +79,26 @@ data "aws_iam_policy_document" "assume_platform_admin" {
   }
 }
 
-resource "aws_iam_user_policy_attachment" "assume_platform_admin" {
+# Attached to a group rather than directly to the user. Direct user attachments
+# do not survive the person changing roles or a second operator being added, and
+# they scatter the permission model across individuals instead of keeping it in
+# one reviewable place.
+resource "aws_iam_group" "platform_operators" {
   count = var.human_user_name == null ? 0 : 1
 
-  user       = var.human_user_name
+  name = "cap-platform-operators"
+}
+
+resource "aws_iam_group_policy_attachment" "assume_platform_admin" {
+  count = var.human_user_name == null ? 0 : 1
+
+  group      = aws_iam_group.platform_operators[0].name
   policy_arn = aws_iam_policy.assume_platform_admin[0].arn
+}
+
+resource "aws_iam_user_group_membership" "human_user" {
+  count = var.human_user_name == null ? 0 : 1
+
+  user   = var.human_user_name
+  groups = [aws_iam_group.platform_operators[0].name]
 }

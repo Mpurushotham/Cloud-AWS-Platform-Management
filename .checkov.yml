@@ -28,4 +28,41 @@ skip-check:
   # Lambda reserved concurrency: platform remediation lambdas are event-driven, not latency-critical
   - CKV_AWS_115
 
+  # ── Lab profile deviations ────────────────────────────────────────────────
+  # Each of these is a deliberate, recorded decision rather than an oversight.
+  # See docs/adr/0015-lab-encryption-tradeoffs.md and docs/security/known-issues.md.
+  #
+  # A customer-managed KMS key costs $1/month each. The lab is budgeted at $0,
+  # so it uses AWS-managed and AWS-owned keys. Data is still encrypted at rest;
+  # what is given up is an editable key policy, independent revocation and
+  # per-service attribution. Production sets state_encryption = "aws:kms".
+  - CKV_AWS_145   # S3 encrypted with KMS by default
+  - CKV_AWS_35    # CloudTrail encrypted with KMS CMK
+  - CKV_AWS_119   # DynamoDB encrypted with KMS CMK
+  - CKV_AWS_158   # CloudWatch log group encrypted with KMS
+  - CKV_AWS_173   # Lambda environment variables encrypted with CMK
+  - CKV_AWS_26    # SNS topic encryption
+  - CKV2_AWS_34   # SSM parameter as SecureString
+
+  # Cross-region replication doubles storage cost and egress. Not justified for
+  # a lab whose entire budget is $0; production should enable it on the state
+  # and audit buckets.
+  - CKV_AWS_144   # S3 cross-region replication
+
+  # Optional CloudTrail extras that add cost or complexity without changing the
+  # lab's security posture. Delivery to CloudWatch Logs is a real gap and is
+  # tracked in known-issues.md, not skipped here permanently.
+  - CKV_AWS_252   # CloudTrail SNS topic
+  - CKV2_AWS_62   # S3 event notifications
+
+  # The sample API is intentionally unauthenticated so that curl demonstrates
+  # the request path with no credential setup. Bounded by API Gateway
+  # throttling, Lambda reserved concurrency and a DynamoDB TTL. Documented in
+  # docs/security/known-issues.md; must not be copied into a real service.
+  - CKV_AWS_309   # API GatewayV2 routes specify an authorization type
+
+  # Code signing requires a Signer profile and a signed artefact pipeline —
+  # disproportionate for a sample handler built by archive_file.
+  - CKV_AWS_272   # Lambda code-signing validation
+
 soft-fail: false
