@@ -7,6 +7,7 @@
 
 # ── Security groups ───────────────────────────────────────────────────────────
 resource "aws_security_group" "alb" {
+  #checkov:skip=CKV2_AWS_5:Network layer applies before compute; consumed by later layers
   name        = "${local.name_prefix}-sg-alb"
   description = "Internet-facing load balancer"
   vpc_id      = aws_vpc.main.id
@@ -19,6 +20,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "app" {
+  #checkov:skip=CKV2_AWS_5:Network layer applies before compute; consumed by later layers
   name        = "${local.name_prefix}-sg-app"
   description = "Application workloads in the private tier"
   vpc_id      = aws_vpc.main.id
@@ -31,6 +33,7 @@ resource "aws_security_group" "app" {
 }
 
 resource "aws_security_group" "data" {
+  #checkov:skip=CKV2_AWS_5:Network layer applies before compute; consumed by later layers
   name        = "${local.name_prefix}-sg-data"
   description = "Databases and caches in the isolated tier"
   vpc_id      = aws_vpc.main.id
@@ -134,6 +137,7 @@ resource "aws_security_group_rule" "vpce_ingress_https" {
 # security groups, not a replacement for them.
 
 resource "aws_network_acl" "isolated" {
+  #checkov:skip=CKV2_AWS_1:Attached via the subnet_ids argument on this resource
   vpc_id     = aws_vpc.main.id
   subnet_ids = aws_subnet.isolated[*].id
 

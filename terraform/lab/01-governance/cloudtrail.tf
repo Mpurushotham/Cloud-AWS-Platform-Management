@@ -4,7 +4,17 @@
 # Data events (S3 object-level, Lambda invoke) are deliberately NOT enabled —
 # they are billed per event and would break the lab's zero-cost budget.
 
+# Versioning, public-access-block, lifecycle and access logging are all
+# configured below as separate resources. Checkov's graph checks do not follow
+# those to a bucket declared with `count`, so they report false negatives here.
+# Verified present on the deployed bucket with:
+#   aws s3api get-bucket-versioning  --bucket cap-lab-cloudtrail-<account>
+#   aws s3api get-public-access-block --bucket cap-lab-cloudtrail-<account>
 resource "aws_s3_bucket" "trail" {
+  #checkov:skip=CKV_AWS_21:Versioning set by aws_s3_bucket_versioning.trail; graph check does not follow it to a counted bucket
+  #checkov:skip=CKV_AWS_18:Access logging set by aws_s3_bucket_logging.trail
+  #checkov:skip=CKV2_AWS_6:Public access block set by aws_s3_bucket_public_access_block.trail
+  #checkov:skip=CKV2_AWS_61:Lifecycle set by aws_s3_bucket_lifecycle_configuration.trail
   count  = var.enable_organization_trail ? 1 : 0
   bucket = local.trail_bucket_name
 }
@@ -148,6 +158,7 @@ resource "aws_s3_bucket_policy" "trail" {
 }
 
 resource "aws_cloudtrail" "org" {
+  #checkov:skip=CKV2_AWS_10:CloudWatch Logs delivery is a tracked gap, see docs/security/known-issues.md
   count = var.enable_organization_trail ? 1 : 0
 
   name           = "cap-lab-org-trail"

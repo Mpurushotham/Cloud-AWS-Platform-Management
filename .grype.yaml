@@ -1,0 +1,32 @@
+# Grype configuration.
+#
+# Scanning the working tree naively reports hundreds of findings from downloaded
+# artifacts rather than from this repository: `.terraform/` holds provider
+# binaries built in Go, so grype reports Go stdlib and grpc advisories that
+# belong to HashiCorp's release, are not shipped by us, and cannot be fixed here.
+#
+# With those excluded the repository has exactly one high finding, recorded
+# below. Scanning what you actually ship is the difference between a signal and
+# a wall of noise nobody reads.
+
+exclude:
+  - "./**/.terraform/**"
+  - "./**/node_modules/**"
+  - "./**/.terraform.lock.hcl"
+  - "./**/cdk.out/**"
+
+ignore:
+  # GHSA-mh99-v99m-4gvg -- brace-expansion DoS via unbounded expansion.
+  #
+  # Unreachable from anything this repository ships:
+  #   * direct dependencies are pinned past it by an override in cdk/package.json
+  #   * the remaining copy is bundled inside aws-cdk-lib, where npm overrides
+  #     cannot reach, and aws-cdk-lib is already on its latest release
+  #   * it arrives only through jest and ts-jest, which are devDependencies
+  #
+  # Revisit when aws-cdk-lib bundles brace-expansion >= 5.0.8.
+  # See docs/security/known-issues.md.
+  - vulnerability: GHSA-mh99-v99m-4gvg
+    package:
+      name: brace-expansion
+      type: npm

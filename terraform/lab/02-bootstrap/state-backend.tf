@@ -16,7 +16,14 @@ resource "aws_kms_alias" "state" {
   target_key_id = aws_kms_key.state[0].key_id
 }
 
+# A KMS key policy is attached to one key and its statements are scoped by that
+# attachment, so Resource must be "*" -- the key cannot name its own ARN before
+# it exists. The account-root statement is the escape hatch AWS requires to keep
+# a key manageable.
 data "aws_iam_policy_document" "state_key" {
+  #checkov:skip=CKV_AWS_111:KMS key policy resource is necessarily "*"; scope comes from the key it attaches to
+  #checkov:skip=CKV_AWS_356:As above
+  #checkov:skip=CKV_AWS_109:Account-root key administration is required by AWS to keep the key manageable
   count = local.use_kms ? 1 : 0
 
   # Account principals administer the key through IAM. This is the AWS-required
