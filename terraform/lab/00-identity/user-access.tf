@@ -23,6 +23,7 @@ resource "aws_iam_policy" "assume_platform_admin" {
 }
 
 data "aws_iam_policy_document" "assume_platform_admin" {
+  #checkov:skip=CKV_AWS_356:signin:CreateOAuth2Token, sts:GetCallerIdentity and the iam:List* identity reads are account-scoped and do not accept a resource ARN. The statements that can be scoped -- credential and MFA self-management -- are confined to ${aws:username}.
   count = var.human_user_name == null ? 0 : 1
 
   statement {
