@@ -1,7 +1,18 @@
 # Architecture Overview
 
-> **Navigation:** [Docs Index](../README.md) | [Decision Guide](decision-guide.md) | [IaC Selection](../when-to-use/iac-selection.md) | [Compute Selection](../when-to-use/compute-selection.md)
+> **Navigation:** [Docs Index](../README.md) | [Diagrams](diagrams/README.md) | [ADR Index](../adr/README.md) | [Decision Guide](decision-guide.md) | [IaC Selection](../when-to-use/iac-selection.md)
 
+This page describes the **target** architecture. For what is actually deployed
+today — and where the two differ — see the
+[diagrams](diagrams/README.md), which mark deployed, partial and absent
+components distinctly, and [ADR-0013](../adr/0013-single-account-lab-profile.md).
+
+| Rendered diagram | Covers |
+|------------------|--------|
+| [Organization Topology](diagrams/01-organization-topology.md) | the OU tree below, target and as-deployed |
+| [Network Topology](diagrams/02-network-topology.md) | the subnet tiers and endpoint design below |
+| [Security Layers](diagrams/05-security-layers.md) | the defence-in-depth stack below, with live status per layer |
+| [CI/CD Pipeline Flow](diagrams/03-cicd-pipeline-flow.md) | workflow order, gates, and OIDC credential flow |
 
 ## Multi-Account Organization Structure
 
@@ -74,6 +85,16 @@ Layer 9: Falco (container runtime threat detection)
 Layer 10: AWS Config (continuous compliance, drift detection)
 Layer 11: CloudTrail (audit trail, all API calls)
 ```
+
+> **Deployed today: layers 2, 5 and 11 in full; 1 and 4 partially.** The
+> remaining six are written and committed under `security/` and `kubernetes/`
+> but not deployed, on cost grounds. The
+> [security layers diagram](diagrams/05-security-layers.md) gives the status of
+> each and the blast radius of each compromise path.
+>
+> Note in particular that **Service Control Policies do not restrict the
+> Organizations management account**, so layer 1 enforces nothing until
+> workloads live in member accounts.
 
 ---
 

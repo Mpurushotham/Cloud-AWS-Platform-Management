@@ -25,9 +25,9 @@ resource "aws_iam_policy" "deny_public_s3" {
       Resource = "*"
       Condition = {
         StringNotEquals = {
-          "s3:x-amz-block-public-acls"      = "true"
-          "s3:x-amz-block-public-policy"    = "true"
-          "s3:x-amz-ignore-public-acls"     = "true"
+          "s3:x-amz-block-public-acls"       = "true"
+          "s3:x-amz-block-public-policy"     = "true"
+          "s3:x-amz-ignore-public-acls"      = "true"
           "s3:x-amz-restrict-public-buckets" = "true"
         }
       }

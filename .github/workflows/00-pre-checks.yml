@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
@@ -26,7 +30,7 @@ jobs:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
       - name: TruffleHog scan
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.90.10
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -55,6 +59,24 @@ jobs:
             --from ${{ github.event.pull_request.base.sha }} \
             --to ${{ github.event.pull_request.head.sha }} \
             --verbose
+
+  terraform-fmt:
+    name: "Terraform Format & Parse"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      # This is a parse check as much as a formatting one: terraform fmt reads
+      # every .tf file, so malformed HCL fails here rather than at plan time in
+      # whichever directory happens to be applied first. 51 files in this
+      # repository were unparseable before this gate existed.
+      - name: Check formatting and parseability
+        run: terraform fmt -check -recursive -diff terraform/
 
   file-checks:
     name: "File Quality Checks"

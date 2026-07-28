@@ -4,7 +4,9 @@ resource "aws_wafv2_web_acl_rule" "common" {
   web_acl_id = aws_wafv2_web_acl.main.id
   scope      = var.scope
 
-  override_action { none {} }
+  override_action {
+    none {}
+  }
 
   statement {
     managed_rule_group_statement {

@@ -10,9 +10,9 @@ locals {
 resource "aws_eks_addon" "addons" {
   for_each = local.addons
 
-  cluster_name             = aws_eks_cluster.main.name
-  addon_name               = each.key
-  addon_version            = each.value.version
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = each.key
+  addon_version               = each.value.version
   resolve_conflicts_on_update = "OVERWRITE"
 
   tags = local.common_tags

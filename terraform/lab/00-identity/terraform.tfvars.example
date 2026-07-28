@@ -1,0 +1,19 @@
+aws_region  = "us-east-1"
+cost_center = "lab"
+owner_team  = "platform-team"
+
+# Console sign-in alias, replacing the 12-digit account ID in the sign-in URL.
+# Globally unique across all AWS accounts. Free. Set to null to skip.
+account_alias = "your-unique-alias"
+
+# Non-root principals permitted to assume cap-platform-admin.
+# Find yours with: aws iam list-users --query 'Users[].Arn'
+break_glass_principal_arns = [
+  "arn:aws:iam::111111111111:user/your-iam-user",
+]
+
+max_session_duration_seconds = 3600
+password_minimum_length      = 14
+
+# IAM user that signs in day to day. Gets assume-role + self-MFA only.
+human_user_name = "your-iam-user"

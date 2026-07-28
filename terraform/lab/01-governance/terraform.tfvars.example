@@ -1,0 +1,13 @@
+aws_region  = "us-east-1"
+cost_center = "lab"
+owner_team  = "platform-team"
+
+# Leave null to derive cap-lab-cloudtrail-<account-id>.
+trail_bucket_name    = null
+trail_retention_days = 30
+
+enable_organization_trail = true
+attach_scps               = true
+
+budget_limit_usd           = 5
+budget_notification_emails = ["you@example.com"]

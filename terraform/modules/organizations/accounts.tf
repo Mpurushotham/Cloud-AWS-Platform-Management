@@ -19,7 +19,7 @@ resource "aws_organizations_account" "accounts" {
   iam_user_access_to_billing = "ALLOW"
 
   lifecycle {
-    ignore_changes = [role_name]
+    ignore_changes  = [role_name]
     prevent_destroy = true
   }
 }

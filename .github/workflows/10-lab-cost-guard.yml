@@ -1,0 +1,83 @@
+---
+name: "10 - Lab Cost Guard"
+
+# The lab profile is budgeted at $0/month. This workflow is what makes that a
+# checked property rather than an intention: it fails if any billable resource
+# appears in the account, and it fails if a pull request proposes one.
+#
+# See terraform/lab/README.md and docs/adr/0013-single-account-lab-profile.md.
+
+on:
+  schedule:
+    # Daily, shortly after the compliance run.
+    - cron: "0 7 * * *"
+  pull_request:
+    paths:
+      - "terraform/lab/**"
+      - "scripts/lab-verify.sh"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  deployed-resources:
+    name: "Audit deployed resources"
+    runs-on: ubuntu-24.04
+    # Only meaningful against a real account, so skipped on pull requests from
+    # forks, which cannot assume the role.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PROWLER_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: cap-lab-cost-guard
+
+      - name: Verify nothing billable is running
+        run: ./scripts/lab-verify.sh
+
+  plan-cost-check:
+    name: "Reject billable resources in the plan"
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        layer:
+          - 00-identity
+          - 01-governance
+          - 02-bootstrap
+          - 03-network
+          - 04-workload
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Validate layer
+        working-directory: terraform/lab/${{ matrix.layer }}
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      # Static analysis of the configuration, so it needs no AWS credentials
+      # and runs on pull requests from forks -- unlike the audit job above.
+      #
+      # Billable resources are not banned: keeping them in the code is how the
+      # production shape stays reviewable. Each must be behind a count or
+      # for_each guard whose variable defaults to off.
+      - name: Check billable resources are gated off
+        run: python3 scripts/check-billable-guards.py terraform/lab/${{ matrix.layer }}

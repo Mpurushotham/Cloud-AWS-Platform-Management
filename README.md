@@ -2,40 +2,54 @@
 
 Production-grade, multi-account AWS cloud platform implementing end-to-end DevSecOps, platform engineering, and compliance capabilities using **GitHub Actions**, **AWS CDK (TypeScript)**, and **Terraform**.
 
-## Architecture Overview
+## Two profiles
+
+This repository contains two implementations of the same architecture. Pick the
+one that matches what you are doing.
+
+| | [`terraform/environments/`](terraform/environments/) | [`terraform/lab/`](terraform/lab/) |
+|---|---|---|
+| **Purpose** | Target production design | Deployable free-tier lab |
+| **Accounts** | 8, via Organizations | 1 |
+| **Compute** | EKS, ECS, RDS Multi-AZ | Lambda |
+| **Cost** | ~$400–600/month per environment | **$0/month** |
+| **Status** | Reference design | **Deployed and verified** |
+
+**New here?** Start with the lab — it deploys in about 45 minutes and costs
+nothing: **[How to Set Up the Free-Tier Lab](docs/how-to/lab-setup-free-tier.md)**.
+
+## Architecture
+
+Diagrams are Mermaid in markdown and render inline on GitHub. They distinguish
+what is deployed from what is designed.
+
+| Diagram | Answers |
+|---------|---------|
+| [Organization Topology](docs/architecture/diagrams/01-organization-topology.md) | Account and OU layout; why SCPs do not restrict the management account |
+| [Network Topology](docs/architecture/diagrams/02-network-topology.md) | Three-tier VPC; what removing NAT costs in capability |
+| [CI/CD Pipeline Flow](docs/architecture/diagrams/03-cicd-pipeline-flow.md) | What runs when; how workflows authenticate without a stored secret |
+| [Request Path](docs/architecture/diagrams/04-request-path.md) | End-to-end request flow and the Terraform → CDK handoff |
+| [Security Layers](docs/architecture/diagrams/05-security-layers.md) | The 11 defence layers, which are live, and blast radius per compromise |
+| [ADR Decision Tree](docs/architecture/diagrams/06-adr-decision-tree.md) | Which decision record answers the question you are holding |
+| [Bootstrap Sequence](docs/architecture/diagrams/07-bootstrap-sequence.md) | Startup order and state recovery |
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        AWS Organization (Root)                          │
-│                                                                         │
-│  ┌─────────── Core OU ──────────────┐  ┌──── Infrastructure OU ──────┐ │
-│  │  Landing Zone  Security  Logging  │  │     Shared Services         │ │
-│  │  (Control      (Sec Hub  (Cloud   │  │  ECR · Route53 · ACM       │ │
-│  │   Tower)        GD master Trail)  │  │  Transit Gateway            │ │
-│  └───────────────────────────────────┘  └─────────────────────────────┘ │
-│                                                                         │
-│  ┌──────────────────── Workloads OU ───────────────────────────────────┐│
-│  │  Non-Prod OU                         Prod OU                        ││
-│  │  ┌──────┐  ┌──────┐  ┌─────────┐   ┌─────────────────────────┐   ││
-│  │  │ Dev  │  │ Test │  │Staging  │   │ Production              │   ││
-│  │  │ VPC  │  │ VPC  │  │ VPC     │   │ VPC · EKS · ECS · RDS  │   ││
-│  │  │ EKS  │  │ EKS  │  │ EKS/ECS │   │ Shield · WAF · GuardDuty│   ││
-│  │  └──────┘  └──────┘  └─────────┘   └─────────────────────────┘   ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                         │
-│  ┌─── Sandbox OU ───┐  SCP Guardrails applied at each OU level         │
-│  │  Sandbox Account │  7 SCPs enforced org-wide                        │
-│  └──────────────────┘                                                   │
-└─────────────────────────────────────────────────────────────────────────┘
-
-CI/CD Pipeline (GitHub Actions — numbered 00–09):
+CI/CD Pipeline (GitHub Actions — numbered 00–10):
   00-pre-checks → 01-iac-security → 02-sast → 03-sca → 04-container
   → 05-dast → 06-compliance → 07-tf-plan → 08-tf-apply → 09-release
+  → 10-lab-cost-guard
 
-Security Layers:
+Security Layers (see the diagram for which are actually deployed):
   SCPs → VPC/NACLs → Security Groups → KMS → GuardDuty → Security Hub
   → Kyverno (K8s) → Falco (runtime) → AWS Config (drift) → CloudTrail
 ```
+
+## Decisions
+
+Sixteen [Architecture Decision Records](docs/adr/README.md) explain why the
+platform is built this way, what the alternatives were, and what each choice
+costs. The [decision tree](docs/architecture/diagrams/06-adr-decision-tree.md)
+maps a question to the record that answers it.
 
 ## Repository Structure
 
