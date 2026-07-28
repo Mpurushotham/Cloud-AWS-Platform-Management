@@ -169,5 +169,10 @@ resource "aws_cloudtrail" "org" {
   include_global_service_events = true
   enable_log_file_validation    = true
 
+  # Delivery to CloudWatch Logs is what makes metric filters possible; the S3
+  # copy alone cannot be alarmed on. See root-usage-alarm.tf.
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_to_logs[0].arn
+
   depends_on = [aws_s3_bucket_policy.trail]
 }

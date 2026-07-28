@@ -17,6 +17,10 @@ repos:
         args: [--maxkb=1024]
       - id: no-commit-to-branch
         args: [--branch, main]
+        # Local guard only. `pre-commit run --all-files` in CI runs on main by
+        # definition, so this hook fails there every time and says nothing
+        # useful -- the branch protection rules are what actually enforce this.
+        stages: [pre-commit]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4

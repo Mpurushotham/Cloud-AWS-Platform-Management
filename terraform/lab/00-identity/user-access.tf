@@ -23,6 +23,7 @@ resource "aws_iam_policy" "assume_platform_admin" {
 }
 
 data "aws_iam_policy_document" "assume_platform_admin" {
+  #checkov:skip=CKV_AWS_356:signin:CreateOAuth2Token, sts:GetCallerIdentity and the iam:List* identity reads are account-scoped and do not accept a resource ARN. The statements that can be scoped -- credential and MFA self-management -- are confined to ${aws:username}.
   count = var.human_user_name == null ? 0 : 1
 
   statement {
@@ -73,7 +74,25 @@ data "aws_iam_policy_document" "assume_platform_admin" {
       "iam:ListVirtualMFADevices",
       "iam:ListAccountAliases",
       "iam:GetAccountPasswordPolicy",
+      "iam:ListGroupsForUser",
+      "iam:ListAttachedUserPolicies",
       "sts:GetCallerIdentity",
+    ]
+    resources = ["*"]
+  }
+
+  # `aws login` (AWS CLI 2.32+) exchanges a console session for temporary
+  # credentials through this action, and refreshes them the same way. Without
+  # it the user can sign in to the console but the CLI fails with
+  # "Unable to create or refresh login credentials ... missing permission for
+  # the 'signin:CreateOAuth2Token' action" -- which is how stripping the user's
+  # standing privileges first broke CLI access entirely.
+  statement {
+    sid    = "UseAwsLogin"
+    effect = "Allow"
+    actions = [
+      "signin:CreateOAuth2Token",
+      "signin:ListTrustedDevices",
     ]
     resources = ["*"]
   }
