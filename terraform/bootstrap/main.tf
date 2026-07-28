@@ -7,6 +7,8 @@ data "aws_region" "current" {}
 
 # ── S3 State Bucket ───────────────────────────────────────────────────────────
 resource "aws_s3_bucket" "state" {
+  #checkov:skip=CKV_AWS_18:Superseded by terraform/lab/02-bootstrap, which logs to a central bucket
+  #checkov:skip=CKV2_AWS_61:As above
   bucket = var.state_bucket_name
 
   lifecycle {

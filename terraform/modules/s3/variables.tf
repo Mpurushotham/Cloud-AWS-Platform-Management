@@ -19,11 +19,6 @@ variable "versioning_enabled" {
   type        = bool
   default     = true
 }
-variable "prevent_destroy" {
-  description = "Prevent bucket destruction via lifecycle"
-  type        = bool
-  default     = false
-}
 variable "cost_center" {
   description = "Cost center tag"
   type        = string

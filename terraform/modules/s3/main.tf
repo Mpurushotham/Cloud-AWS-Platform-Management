@@ -1,7 +1,15 @@
 resource "aws_s3_bucket" "main" {
+  #checkov:skip=CKV_AWS_18:Access logging target is supplied by the caller via var.logging_target_bucket; this module does not assume one
   bucket = "${var.project}-${var.environment}-${var.bucket_suffix}"
   tags   = local.common_tags
-  lifecycle { prevent_destroy = var.prevent_destroy }
+  # prevent_destroy must be a constant: the lifecycle block is evaluated before
+  # variables are resolved, so `var.prevent_destroy` is a hard error. This module
+  # backs audit and log buckets, where accidental deletion is unrecoverable, so
+  # the protection is unconditional. A bucket that genuinely needs to be
+  # destroyable should not use this module.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
@@ -40,6 +48,7 @@ resource "aws_s3_bucket_policy" "main" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "main" {
+  #checkov:skip=CKV_AWS_300:abort_incomplete_multipart_upload is set inside the dynamic rule block; checkov does not evaluate dynamic blocks
   count  = length(var.lifecycle_rules) > 0 ? 1 : 0
   bucket = aws_s3_bucket.main.id
 
@@ -53,6 +62,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
         storage_class = rule.value.transition_class
       }
       expiration { days = rule.value.expiration_days }
+
+      # Failed multipart uploads are retained and billed indefinitely otherwise,
+      # and do not appear in an ordinary bucket listing.
+      abort_incomplete_multipart_upload {
+        days_after_initiation = 7
+      }
     }
   }
 }

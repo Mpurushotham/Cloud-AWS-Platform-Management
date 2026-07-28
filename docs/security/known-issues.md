@@ -412,3 +412,48 @@ Modern OPA requires `contains` for a partial set rule. Converting all 12 rules t
 `future.keywords.contains`.
 
 **Fixed:** added the missing import. `conftest verify` (OPA 1.15.2) passes.
+
+---
+
+## FIXED — three modules could not be validated at all
+
+Surfaced by running `terraform validate` on every module once `versions.tf`
+existed to pin a provider. All three had been unvalidatable since they were
+written.
+
+**`modules/waf`** declared `resource "aws_wafv2_web_acl_rule"`, which is not a
+resource type the AWS provider offers — WAFv2 rules are inline on
+`aws_wafv2_web_acl`. The file even carried a comment saying exactly that, while
+keeping the block that broke the module.
+
+Worse than the parse error: the web ACL had **no rules at all**. `default_action`
+was `allow` and nothing evaluated a request. A WAF in that state bills for
+inspecting nothing, which is more dangerous than no WAF because it reads as
+protection. It now attaches four AWS managed rule groups — including
+`AWSManagedRulesKnownBadInputsRuleSet`, which covers Log4Shell — plus a rate
+limit and a logging configuration with `authorization` and `cookie` redacted.
+
+**`modules/s3`** used `lifecycle { prevent_destroy = var.prevent_destroy }`.
+Terraform evaluates `lifecycle` before variables, so a variable there is a hard
+error. Now a literal `true`: this module backs audit and log buckets, where
+accidental deletion is unrecoverable.
+
+**`modules/organizations`** read its SCP documents from
+`terraform/modules/scp/policies/`, an empty directory. Repointed to
+`security/scps/`, and the templated region policy it expects
+(`deny-region.json.tpl`) now exists alongside the static one.
+
+**`modules/rds`** passed `master_username`, which `aws_db_instance` does not
+accept — the argument is `username`.
+
+---
+
+## FIXED — a provider-attribute change I introduced
+
+While clearing a deprecation warning I replaced `data.aws_region.<x>.name` with
+`.region` across the tree. `.region` exists only in AWS provider 6.x, and the
+modules pin `~> 5.0`, so `modules/security-hub` then failed to validate.
+
+The warning had appeared because the modules had **no** `versions.tf` and were
+resolving whatever provider was newest. Adding the pins was the real fix;
+the attribute rename was chasing a symptom of the missing pin. Reverted.

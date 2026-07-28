@@ -1,3 +1,6 @@
+# Service Control Policy documents are authored once under security/scps/ and
+# consumed here. This previously pointed at terraform/modules/scp/policies/,
+# which is an empty directory, so every file() call failed at validate time.
 # Service Control Policies applied at OU and root level
 
 locals {
@@ -6,43 +9,43 @@ locals {
       name        = "cap-deny-root-user"
       description = "Deny all API calls made by root principal"
       target_ids  = [aws_organizations_organization.main.roots[0].id]
-      content     = file("${path.module}/../scp/policies/deny-root-user.json")
+      content     = file("${path.module}/../../../security/scps/deny-root-user.json")
     }
     deny_region = {
       name        = "cap-deny-region-restriction"
       description = "Deny actions in non-approved regions"
       target_ids  = [aws_organizations_organizational_unit.workloads.id]
-      content     = templatefile("${path.module}/../scp/policies/deny-region.json.tpl", { allowed_regions = var.allowed_regions })
+      content     = templatefile("${path.module}/../../../security/scps/deny-region.json.tpl", { allowed_regions = var.allowed_regions })
     }
     require_encryption = {
       name        = "cap-require-encryption"
       description = "Deny unencrypted S3, EBS, RDS resources"
       target_ids  = [aws_organizations_organizational_unit.workloads.id]
-      content     = file("${path.module}/../scp/policies/require-encryption.json")
+      content     = file("${path.module}/../../../security/scps/require-encryption.json")
     }
     deny_public_s3 = {
       name        = "cap-deny-public-s3"
       description = "Deny disabling S3 block public access"
       target_ids  = [aws_organizations_organization.main.roots[0].id]
-      content     = file("${path.module}/../scp/policies/deny-public-s3.json")
+      content     = file("${path.module}/../../../security/scps/deny-public-s3.json")
     }
     require_mfa = {
       name        = "cap-require-mfa"
       description = "Deny non-STS API calls without MFA"
       target_ids  = [aws_organizations_organizational_unit.prod.id]
-      content     = file("${path.module}/../scp/policies/require-mfa.json")
+      content     = file("${path.module}/../../../security/scps/require-mfa.json")
     }
     deny_delete_cloudtrail = {
       name        = "cap-deny-delete-cloudtrail"
       description = "Deny stopping or deleting CloudTrail"
       target_ids  = [aws_organizations_organization.main.roots[0].id]
-      content     = file("${path.module}/../scp/policies/deny-delete-cloudtrail.json")
+      content     = file("${path.module}/../../../security/scps/deny-delete-cloudtrail.json")
     }
     deny_disable_guardduty = {
       name        = "cap-deny-disable-guardduty"
       description = "Deny disabling GuardDuty"
       target_ids  = [aws_organizations_organization.main.roots[0].id]
-      content     = file("${path.module}/../scp/policies/deny-disable-guardduty.json")
+      content     = file("${path.module}/../../../security/scps/deny-disable-guardduty.json")
     }
   }
 }
