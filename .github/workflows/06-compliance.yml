@@ -30,10 +30,10 @@ jobs:
             account_id: "333333333333"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.PROWLER_ROLE_ARN }}
           aws-region: us-east-1
@@ -69,14 +69,14 @@ jobs:
             --output-directory prowler-results/ \
             --ignore-exit-code-3
 
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
           sarif_file: prowler-results/prowler-cis-${{ matrix.env }}.sarif.json
           category: prowler-${{ matrix.env }}
 
       - name: Upload compliance reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: prowler-${{ matrix.env }}-${{ github.run_id }}
@@ -92,14 +92,14 @@ jobs:
         env: [dev, staging, prod]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: "~> 1.9"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.env))] }}
           aws-region: us-east-1

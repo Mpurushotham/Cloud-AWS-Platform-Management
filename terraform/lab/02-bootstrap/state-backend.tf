@@ -16,7 +16,14 @@ resource "aws_kms_alias" "state" {
   target_key_id = aws_kms_key.state[0].key_id
 }
 
+# A KMS key policy is attached to one key and its statements are scoped by that
+# attachment, so Resource must be "*" -- the key cannot name its own ARN before
+# it exists. The account-root statement is the escape hatch AWS requires to keep
+# a key manageable.
 data "aws_iam_policy_document" "state_key" {
+  #checkov:skip=CKV_AWS_111:KMS key policy resource is necessarily "*"; scope comes from the key it attaches to
+  #checkov:skip=CKV_AWS_356:As above
+  #checkov:skip=CKV_AWS_109:Account-root key administration is required by AWS to keep the key manageable
   count = local.use_kms ? 1 : 0
 
   # Account principals administer the key through IAM. This is the AWS-required
@@ -172,6 +179,8 @@ resource "aws_s3_bucket_policy" "state" {
 
 # State locking. Terraform 1.10 can lock natively in S3 via use_lockfile, which
 # removes this table; this repository pins ~> 1.9, so the table is still needed.
+# nosemgrep: aws-dynamodb-table-unencrypted -- key choice follows
+# var.state_encryption; defaults to an AWS-owned key for cost. See ADR-0015.
 resource "aws_dynamodb_table" "state_lock" {
   name         = var.state_lock_table_name
   billing_mode = "PAY_PER_REQUEST"

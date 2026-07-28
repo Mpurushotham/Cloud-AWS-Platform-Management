@@ -1,0 +1,36 @@
+# Gitleaks configuration.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Reviewed false positives"
+
+paths = [
+  # ECS task definitions reference secrets by Secrets Manager ARN via
+  # valueFrom, which is the correct pattern -- no secret value is present. The
+  # generic-api-key rule matches on the DATABASE_URL / API_SECRET_KEY names
+  # sitting beside an ARN string.
+  '''^ecs/task-definitions/.*\.json$''',
+
+  # detect-secrets' baseline stores SHA-1 digests of reviewed false positives.
+  # gitleaks' generic-api-key rule matches those hex digests, so the file
+  # recording what is *not* a secret is itself reported as one. The digests are
+  # one-way and reveal nothing.
+  '''^\.secrets\.baseline$''',
+
+  # npm lockfile integrity hashes are base64 digests, not credentials.
+  '''package-lock\.json$''',
+]
+
+regexes = [
+  # Secrets Manager ARNs are pointers, not secrets. An ECS task definition
+  # referencing one through valueFrom is exactly the pattern we want; flagging
+  # it discourages the correct behaviour.
+  '''arn:aws:secretsmanager:[a-z0-9-]+:[0-9A-Z_]+:secret:[^"]*''',
+
+  # Public GitHub OIDC provider certificate thumbprints. These are published by
+  # AWS and GitHub and must appear verbatim in the IdP configuration.
+  '''6938fd4d98bab03faadb97b34396831e3780aea1''',
+  '''1c58a3a8518e8759bf075b76b750d4f2df264fcd''',
+]

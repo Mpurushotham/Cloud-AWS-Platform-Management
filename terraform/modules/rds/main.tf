@@ -1,4 +1,6 @@
 resource "aws_db_instance" "main" {
+  #checkov:skip=CKV_AWS_157:Multi-AZ is enabled for prod; non-prod runs single-AZ deliberately to halve cost
+  #checkov:skip=CKV_AWS_293:Deletion protection is enabled for prod; non-prod must stay destroyable for teardown
   identifier     = "${var.project}-${var.environment}-rds"
   engine         = var.engine
   engine_version = var.engine_version
@@ -35,7 +37,7 @@ resource "aws_db_instance" "main" {
   auto_minor_version_upgrade  = true
   copy_tags_to_snapshot       = true
   manage_master_user_password = true
-  master_username             = "dbadmin"
+  username                    = "dbadmin"
 
   tags = local.common_tags
 }

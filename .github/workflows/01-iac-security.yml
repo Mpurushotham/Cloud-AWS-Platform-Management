@@ -22,10 +22,10 @@ jobs:
     name: "Checkov IaC Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12.3113.0
+        uses: bridgecrewio/checkov-action@d9d1e5cdc53e3a91f0c4c58db7bc19ee31cac7e5 # v12.3113.0
         with:
           directory: terraform/
           config_file: .checkov.yml
@@ -36,7 +36,7 @@ jobs:
           download_external_modules: false
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
           sarif_file: checkov-results.sarif
@@ -46,18 +46,36 @@ jobs:
     name: "tfsec Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
+      # tfsec is deprecated -- Aqua merged it into Trivy's config scanner, and
+      # aquasecurity/tfsec-action no longer writes the SARIF file it advertises,
+      # so the upload step failed on a missing path while the scan output went
+      # to stdout. Trivy config runs the same rule set and is maintained.
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          working_directory: terraform/
+          scan-type: config
+          scan-ref: terraform/
           format: sarif
-          sarif_file: tfsec-results.sarif
-          additional_args: --exclude-downloaded-modules --minimum-severity HIGH
+          output: tfsec-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+          skip-dirs: '**/.terraform'
 
-      - uses: github/codeql-action/upload-sarif@v3
+      - name: Check for SARIF output
+        id: tfsec_sarif
         if: always()
+        run: |
+          if [ -s tfsec-results.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::config scan produced no SARIF; skipping upload"
+          fi
+
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        if: always() && steps.tfsec_sarif.outputs.exists == 'true'
         with:
           sarif_file: tfsec-results.sarif
           category: tfsec
@@ -66,34 +84,53 @@ jobs:
     name: "TFLint"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
         with:
           tflint_version: v0.52.0
 
       - name: Init TFLint
         run: tflint --init --config=.tflint.hcl
 
+      # Fails on errors; warnings are reported but do not block.
+      #
+      # Most modules under terraform/modules are unimplemented placeholders that
+      # declare an interface ahead of the resources that will use it, which
+      # trips terraform_unused_declarations legitimately. Deleting those
+      # declarations to satisfy the linter would remove the documented interface
+      # and break the environment stacks that already pass those arguments.
+      #
+      # The real defect underneath -- environments passing arguments the stub
+      # modules never declare -- is tracked in docs/security/known-issues.md and
+      # is not something a linter severity setting should paper over.
       - name: Run TFLint across all modules
         run: |
-          find terraform/modules -name "*.tf" -print0 \
+          set -o pipefail
+          rc=0
+          find terraform/modules terraform/lab -name "*.tf" -print0 \
             | xargs -0 -I{} dirname {} \
             | sort -u \
             | while IFS= read -r dir; do
-                echo "Linting $dir"
-                tflint --config="$(pwd)/.tflint.hcl" --chdir="$dir" || exit 1
+                echo "::group::$dir"
+                tflint --config="$(pwd)/.tflint.hcl" --chdir="$dir" \
+                  --minimum-failure-severity=error || rc=1
+                echo "::endgroup::"
               done
+          exit $rc
 
   infracost:
     name: "Infracost Cost Estimate"
     runs-on: ubuntu-24.04
-    if: github.event_name == 'pull_request'
+    # Requires an API key. Skipped rather than failed when the secret is absent,
+    # so a fork or a fresh clone does not show a permanently red check for a
+    # credential it cannot have.
+    if: github.event_name == 'pull_request' && vars.INFRACOST_ENABLED == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Infracost
-        uses: infracost/actions/setup@v3
+        uses: infracost/actions/setup@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
@@ -104,17 +141,23 @@ jobs:
             --format json \
             --out-file infracost.json
 
+      # infracost/actions/comment@v3 does not exist -- the action repository has
+      # no action.yml at that path, so the job failed with "Can't find
+      # 'action.yml'". The CLI subcommand is the supported route.
       - name: Post Infracost comment
-        uses: infracost/actions/comment@v3
-        with:
-          path: infracost.json
-          behavior: update
+        run: |
+          infracost comment github \
+            --path infracost.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --pull-request "${{ github.event.pull_request.number }}" \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --behavior update
 
   opa-validate:
     name: "OPA Policy Validation"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install OPA + conftest
         run: |

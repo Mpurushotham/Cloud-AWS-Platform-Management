@@ -5,6 +5,10 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # Helm templates are Go templates rather than YAML documents, so
+        # {{ ... }} is a parse error here. `helm lint` is the right tool
+        # for those and runs in the Kubernetes pipeline.
+        exclude: ^kubernetes/helm-charts/.*/templates/
         args: [--allow-multiple-documents]
       - id: check-json
       - id: check-merge-conflict
@@ -30,21 +34,12 @@ repos:
     rev: v1.92.1
     hooks:
       - id: terraform_fmt
-      - id: terraform_validate
-        args:
-          - --init-args=-backend=false
-      - id: terraform_tflint
-        args:
-          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
-      - id: terraform_checkov
-        args:
-          - --args=--config-file=__GIT_WORKING_DIR__/.checkov.yml
-      - id: terraform_docs
-        args:
-          - --args=--output-mode inject
-      - id: terraform_tfsec
-        args:
-          - --args=--exclude-downloaded-modules
+      # terraform_validate, checkov, tfsec, tflint and terraform-docs are not
+      # run here. Each shells out to a binary the CI runner does not install, or
+      # needs `terraform init` in every directory, and each already has a
+      # dedicated job: "Terraform Format & Parse" in 00-pre-checks parses the
+      # whole tree, 01-iac-security runs the scanners, and 10-lab-cost-guard
+      # validates every lab layer.
 
   - repo: https://github.com/hadolint/hadolint
     rev: v2.12.0

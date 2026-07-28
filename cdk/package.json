@@ -23,10 +23,17 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "roots": ["<rootDir>/test"],
-    "testMatch": ["**/*.test.ts"],
+    "roots": [
+      "<rootDir>/test"
+    ],
+    "testMatch": [
+      "**/*.test.ts"
+    ],
     "transform": {
       "^.+\\.tsx?$": "ts-jest"
     }
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.8"
   }
 }

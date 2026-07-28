@@ -96,6 +96,7 @@ resource "aws_iam_role" "terraform_apply" {
 }
 
 resource "aws_iam_role_policy_attachment" "terraform_apply_admin" {
+  #checkov:skip=CKV_AWS_274:Terraform apply genuinely requires broad rights; containment is by explicit deny, see ADR-0005
   role       = aws_iam_role.terraform_apply.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
@@ -122,6 +123,8 @@ resource "aws_iam_role" "image_push" {
 }
 
 resource "aws_iam_role_policy" "image_push_ecr" {
+  #checkov:skip=CKV_AWS_290:ecr:GetAuthorizationToken is account-scoped and cannot name a resource
+  #checkov:skip=CKV_AWS_355:As above; the lab layer scopes the remaining actions to cap-* repositories
   name = "cap-image-push-ecr"
   role = aws_iam_role.image_push.id
   policy = jsonencode({

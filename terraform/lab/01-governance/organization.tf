@@ -26,7 +26,3 @@ resource "aws_organizations_organization" "this" {
     prevent_destroy = true
   }
 }
-
-data "aws_organizations_organization" "current" {
-  depends_on = [aws_organizations_organization.this]
-}

@@ -16,3 +16,9 @@ variable "environment" {
   type        = string
   default     = "security"
 }
+
+variable "is_organization_admin" {
+  description = "True in the delegated GuardDuty administrator account, which owns organization-wide enablement."
+  type        = bool
+  default     = false
+}

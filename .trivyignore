@@ -1,0 +1,11 @@
+# Trivy ignore list.
+#
+# GHSA-mh99-v99m-4gvg / CVE for brace-expansion DoS via unbounded expansion.
+# Unreachable from anything shipped: direct dependencies are pinned past it by an
+# override in cdk/package.json, and the remaining copy is bundled inside
+# aws-cdk-lib where an override cannot reach it. aws-cdk-lib is already on its
+# latest release. Arrives only via jest/ts-jest, which are devDependencies.
+#
+# Revisit when aws-cdk-lib bundles brace-expansion >= 5.0.8.
+# See docs/security/known-issues.md.
+GHSA-mh99-v99m-4gvg

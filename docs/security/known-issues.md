@@ -173,6 +173,56 @@ the guard reported it — it had no way to see itself.
 
 ---
 
+## OPEN — environments pass 68 arguments that the stub modules never declare
+
+**Severity:** blocking for `terraform/environments/**`
+
+Most modules under `terraform/modules/` are unimplemented placeholders. They
+declare a handful of variables and create no resources. The environment stacks,
+however, call them with a full argument list:
+
+```hcl
+module "vpc_endpoints" {
+  source      = "../../modules/vpc-endpoints"
+  vpc_id      = module.vpc.vpc_id       # not declared by the module
+  subnet_ids  = module.vpc.isolated_subnet_ids
+  vpc_cidr    = var.vpc_cidr
+  environment = "dev"
+  project     = "cap"                   # the only variable that exists
+}
+```
+
+Terraform rejects an argument a module does not declare, so every affected
+environment fails at `terraform validate` — before any provider or credential is
+involved.
+
+Counted after the HCL parse fixes: **68 undeclared arguments across 11 modules**
+(`acm`, `aws-config`, `cloudwatch`, `control-tower`, `ecs`,
+`iam-identity-center`, `route53`, `s3`, `security-groups`, `transit-gateway`,
+`vpc-endpoints`).
+
+This is why the `Plan — dev/staging/prod` checks cannot pass, and it is a
+separate problem from the missing member accounts: even with the accounts, the
+configuration would not validate.
+
+**Not fixed here, deliberately.** Two wrong ways to make the symptom disappear:
+
+- Deleting the arguments from the environments — discards the intended design.
+- Deleting the unused variables from the modules — was attempted and reverted;
+  it removes the documented interface and increases the mismatch, because the
+  callers pass *more* than the modules declare, not less.
+
+The correct fix is to implement each module's variable set to match what its
+callers pass, module by module, with the resources to use them. That is
+substantial work and belongs in its own change.
+
+**Consequence for CI:** TFLint runs with `--minimum-failure-severity=error`, so
+the `terraform_unused_declarations` warnings on placeholder modules surface
+without blocking. Raise it back to warning severity once the modules are
+implemented.
+
+---
+
 ## OPEN — the sample API is unauthenticated
 
 **Severity:** accepted for the lab
@@ -266,3 +316,144 @@ Dependabot propose updates.
 
 Security issues in this repository should be raised as a private security
 advisory rather than a public issue.
+
+---
+
+## FIXED — 110 GitHub Actions were pinned to mutable tags
+
+**Severity:** medium, supply chain
+
+Every workflow referenced actions by tag (`actions/checkout@v4`). A tag is
+mutable: whoever controls an action repository can repoint it at new code, which
+then executes inside workflows holding `id-token: write` — the permission that
+mints AWS credentials.
+
+Three workflows additionally piped a remote install script straight into a
+shell:
+
+```yaml
+run: |
+  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh
+```
+
+That fetches whatever is on `main` at the moment the job runs and executes it
+with the runner's full privileges. Nothing pins it and nothing verifies it.
+
+**Fixed:** all 110 action references are pinned to commit SHAs with the version
+in a trailing comment, which Dependabot understands and updates. The three
+`curl | sh` installs are replaced with pinned `anchore/sbom-action/download-syft`
+and `sigstore/cosign-installer` steps.
+
+Semgrep findings fell from 117 to 3 as a result.
+
+---
+
+## FIXED — Dependabot was never actually enabled
+
+`.github/dependabot.yml` was the unedited GitHub template: `package-ecosystem`
+was the empty string and `directory` pointed at `/dependabot/`. No ecosystem was
+ever scanned, so no update PR could ever be raised — while the badge and the file
+suggested otherwise.
+
+**Fixed:** real configuration for `github-actions`, `npm` (cdk), `terraform` and
+`pip`, each with a 7-day `cooldown`. The cooldown matters: a compromised release
+is most dangerous in its first days, before anyone has looked at it.
+
+---
+
+## ACCEPTED — three Semgrep warnings remain
+
+| Finding | Why it stays |
+|---------|--------------|
+| `aws-dynamodb-table-unencrypted` ×2 | AWS-owned key rather than a CMK — the $1/month/key tradeoff in [ADR-0015](../adr/0015-lab-encryption-tradeoffs.md). Data is still encrypted at rest. |
+| `allow-privilege-escalation` | The Helm template sets `securityContext` from `.Values.containerSecurityContext`, where `allowPrivilegeEscalation: false` is defined. Semgrep analyses the template statically and cannot resolve `{{ toYaml }}`, so it reports a false positive. |
+
+The SAST job runs with `--severity=ERROR`, so warnings surface in the SARIF
+report without blocking a merge. There are currently **zero** ERROR findings.
+
+---
+
+## FIXED — a pinned action was itself on a compromised version
+
+**Severity:** critical
+
+Pinning actions to commit SHAs (above) removed the mutable-tag risk but
+introduced a subtler one: **a SHA pins you to a specific version, including a bad
+one.** `aquasecurity/trivy-action` was pinned to `v0.33.1`, and
+[GHSA-69fq-xp46-6x23](https://github.com/advisories/GHSA-69fq-xp46-6x23) —
+*"Trivy ecosystem supply chain was briefly compromised"*, severity **critical** —
+affects everything below `0.35.0`.
+
+So the pin was durable and wrong, and would have stayed wrong indefinitely
+because a SHA never moves.
+
+**Fixed:** repinned to `v0.36.0`. Note that `0.69.4` is also affected with no
+patched release, so "newest" is not automatically safe either.
+
+**The lesson:** SHA pinning and vulnerability scanning are complements, not
+alternatives. Pinning makes the supply chain deterministic; only scanning tells
+you whether what you pinned is any good. This was caught by Dependabot's alert
+on the repository, not by the pinning exercise that created it.
+
+---
+
+## FIXED — conftest policies did not parse
+
+`conftest.rego` used Rego v0 partial-set syntax:
+
+```rego
+deny[msg] if { ... }
+```
+
+Modern OPA requires `contains` for a partial set rule. Converting all 12 rules to
+`deny contains msg if { ... }` then produced a *different* error —
+`var cannot be used for rule name` — because the file imported
+`future.keywords.if` and `future.keywords.in` but **not**
+`future.keywords.contains`.
+
+**Fixed:** added the missing import. `conftest verify` (OPA 1.15.2) passes.
+
+---
+
+## FIXED — three modules could not be validated at all
+
+Surfaced by running `terraform validate` on every module once `versions.tf`
+existed to pin a provider. All three had been unvalidatable since they were
+written.
+
+**`modules/waf`** declared `resource "aws_wafv2_web_acl_rule"`, which is not a
+resource type the AWS provider offers — WAFv2 rules are inline on
+`aws_wafv2_web_acl`. The file even carried a comment saying exactly that, while
+keeping the block that broke the module.
+
+Worse than the parse error: the web ACL had **no rules at all**. `default_action`
+was `allow` and nothing evaluated a request. A WAF in that state bills for
+inspecting nothing, which is more dangerous than no WAF because it reads as
+protection. It now attaches four AWS managed rule groups — including
+`AWSManagedRulesKnownBadInputsRuleSet`, which covers Log4Shell — plus a rate
+limit and a logging configuration with `authorization` and `cookie` redacted.
+
+**`modules/s3`** used `lifecycle { prevent_destroy = var.prevent_destroy }`.
+Terraform evaluates `lifecycle` before variables, so a variable there is a hard
+error. Now a literal `true`: this module backs audit and log buckets, where
+accidental deletion is unrecoverable.
+
+**`modules/organizations`** read its SCP documents from
+`terraform/modules/scp/policies/`, an empty directory. Repointed to
+`security/scps/`, and the templated region policy it expects
+(`deny-region.json.tpl`) now exists alongside the static one.
+
+**`modules/rds`** passed `master_username`, which `aws_db_instance` does not
+accept — the argument is `username`.
+
+---
+
+## FIXED — a provider-attribute change I introduced
+
+While clearing a deprecation warning I replaced `data.aws_region.<x>.name` with
+`.region` across the tree. `.region` exists only in AWS provider 6.x, and the
+modules pin `~> 5.0`, so `modules/security-hub` then failed to validate.
+
+The warning had appeared because the modules had **no** `versions.tf` and were
+resolving whatever provider was newest. Adding the pins was the real fix;
+the attribute rename was chasing a symptom of the missing pin. Reverted.

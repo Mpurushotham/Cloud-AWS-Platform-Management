@@ -1,10 +1,11 @@
 package main
 
+import future.keywords.contains
 import future.keywords.if
 import future.keywords.in
 
 # ── S3 Public Access Block ─────────────────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_s3_bucket"
     bucket_name := resource.values.bucket
@@ -23,7 +24,7 @@ any_block_public_access(bucket_addr, plan) if {
 }
 
 # ── EKS Public Endpoint Denied in Prod ────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_eks_cluster"
     resource.values.vpc_config[_].endpoint_public_access == true
@@ -32,7 +33,7 @@ deny[msg] if {
 }
 
 # ── RDS Storage Encryption Required ───────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_db_instance"
     resource.values.storage_encrypted != true
@@ -40,7 +41,7 @@ deny[msg] if {
 }
 
 # ── KMS Key Rotation Required ─────────────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_kms_key"
     resource.values.enable_key_rotation != true
@@ -48,7 +49,7 @@ deny[msg] if {
 }
 
 # ── IMDSv2 Required on EC2 Instances ─────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_instance"
     metadata := resource.values.metadata_options[_]
@@ -57,7 +58,7 @@ deny[msg] if {
 }
 
 # ── SQS Queue Encryption Required ────────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_sqs_queue"
     not resource.values.kms_master_key_id
@@ -65,7 +66,7 @@ deny[msg] if {
 }
 
 # ── SNS Topic Encryption Required ────────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_sns_topic"
     not resource.values.kms_master_key_id
@@ -73,14 +74,14 @@ deny[msg] if {
 }
 
 # ── ElastiCache Encryption Required ──────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_elasticache_replication_group"
     resource.values.at_rest_encryption_enabled != true
     msg := sprintf("ElastiCache replication group '%v' must have at_rest_encryption_enabled=true", [resource.name])
 }
 
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_elasticache_replication_group"
     resource.values.transit_encryption_enabled != true
@@ -88,7 +89,7 @@ deny[msg] if {
 }
 
 # ── VPC Flow Logs Required ────────────────────────────────────────────────────
-warn[msg] if {
+warn contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_vpc"
     vpc_id := resource.address
@@ -103,14 +104,14 @@ any_flow_log(vpc_id, plan) if {
 }
 
 # ── No Default VPC Usage ─────────────────────────────────────────────────────
-deny[msg] if {
+deny contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_default_vpc"
     msg := "Default VPC must not be used. Remove aws_default_vpc resources and use module vpc instead."
 }
 
 # ── CloudWatch Log Group Retention Required ───────────────────────────────────
-warn[msg] if {
+warn contains msg if {
     resource := input.planned_values.root_module.resources[_]
     resource.type == "aws_cloudwatch_log_group"
     not resource.values.retention_in_days

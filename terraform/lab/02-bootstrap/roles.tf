@@ -286,7 +286,11 @@ resource "aws_iam_role_policy" "prowler_additional" {
   policy = data.aws_iam_policy_document.prowler_additional.json
 }
 
+# account:*, organizations:Describe/List and ce:* are account-scoped read APIs
+# that do not support resource-level permissions, so "*" is the only expressible
+# resource. All actions are read-only.
 data "aws_iam_policy_document" "prowler_additional" {
+  #checkov:skip=CKV_AWS_356:Account-scoped read APIs do not support resource-level permissions
   statement {
     sid    = "AdditionalReadOnly"
     effect = "Allow"

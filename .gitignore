@@ -39,7 +39,10 @@ __pycache__/
 *.key
 *.p12
 *.pfx
-.secrets.baseline
+# .secrets.baseline is deliberately committed: it is the reviewed record of
+# detect-secrets false positives, not a secret itself. The pre-commit hook
+# passes --baseline .secrets.baseline and fails without it.
+!.secrets.baseline
 .gitleaks-report.json
 
 # OS

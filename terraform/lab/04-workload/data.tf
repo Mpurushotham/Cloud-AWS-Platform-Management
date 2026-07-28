@@ -1,3 +1,6 @@
+# nosemgrep: aws-dynamodb-table-unencrypted -- encrypted with an AWS-owned key.
+# A customer-managed key costs $1/month against a $0 budget; recorded in
+# docs/adr/0015-lab-encryption-tradeoffs.md.
 resource "aws_dynamodb_table" "items" {
   name = local.table_name
 

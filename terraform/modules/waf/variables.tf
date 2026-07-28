@@ -21,3 +21,11 @@ variable "blocked_countries" {
   type        = list(string)
   default     = []
 }
+
+variable "log_destination_arn" {
+  description = <<-EOT
+    Kinesis Firehose delivery stream or CloudWatch log group ARN receiving WAF
+    logs. A web ACL without logging gives no evidence after an incident.
+  EOT
+  type        = string
+}

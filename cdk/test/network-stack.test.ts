@@ -48,9 +48,14 @@ test('VPC flow logs go to CloudWatch Logs', () => {
 
 test('S3 gateway endpoint exists', () => {
   const template = Template.fromStack(buildStack());
+  // A gateway endpoint's ServiceName synthesises to an Fn::Join over the region
+  // pseudo-parameter, not a literal string, so Match.stringLikeRegexp can never
+  // match it. Assert the intrinsic instead.
   template.hasResourceProperties('AWS::EC2::VPCEndpoint', {
     VpcEndpointType: 'Gateway',
-    ServiceName: Match.stringLikeRegexp('s3'),
+    ServiceName: {
+      'Fn::Join': ['', ['com.amazonaws.', { Ref: 'AWS::Region' }, '.s3']],
+    },
   });
 });
 

@@ -28,6 +28,12 @@ export class SecurityStack extends cdk.Stack {
         description: `KMS key for cap-${environment} ${service}`,
         enableKeyRotation: true,
         removalPolicy: isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+        // Deleting a KMS key destroys every ciphertext encrypted under it, and
+        // the operation cannot be undone once the window elapses. Production
+        // takes the maximum 30 days so an accidental schedule-deletion can be
+        // caught and cancelled; non-production takes the 7-day minimum so test
+        // environments can be torn down without leaving keys pending for a month.
+        pendingWindow: cdk.Duration.days(isProd ? 30 : 7),
       });
       this.kmsKeys[service] = key;
       this.kmsKeyArns[service] = key.keyArn;

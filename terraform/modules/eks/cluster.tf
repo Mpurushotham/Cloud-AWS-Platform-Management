@@ -2,6 +2,8 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 resource "aws_eks_cluster" "main" {
+  #checkov:skip=CKV_AWS_39:Public endpoint is prod-disabled and non-prod is restricted by var.public_access_cidrs, which rejects 0.0.0.0/0. See ADR-0010
+  #checkov:skip=CKV_AWS_38:As above -- the allow-list variable forbids 0.0.0.0/0 by validation
   name     = "${var.project}-${var.environment}-eks"
   role_arn = aws_iam_role.cluster.arn
   version  = var.cluster_version
@@ -11,6 +13,11 @@ resource "aws_eks_cluster" "main" {
     endpoint_private_access = true
     endpoint_public_access  = var.environment != "prod" ? true : false
     security_group_ids      = [aws_security_group.cluster.id]
+
+    # ADR-0010 permits a public endpoint outside production only when it is
+    # restricted by CIDR. Without this the endpoint was reachable from
+    # 0.0.0.0/0 and protected by authentication alone.
+    public_access_cidrs = var.environment != "prod" ? var.public_access_cidrs : null
   }
 
   encryption_config {
