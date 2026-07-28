@@ -34,18 +34,12 @@ repos:
     rev: v1.92.1
     hooks:
       - id: terraform_fmt
-      # checkov, tfsec, tflint and terraform-docs are intentionally not run here: the hooks
-      # shell out to binaries the CI runner does not install, and each already
-      # has a dedicated job in 01-iac-security.yml. Running them twice meant
-      # one copy failing with 'command not found' while the real job passed.
-      - id: terraform_validate
-        # environments/ pass arguments the stub modules never declare, and
-        # bootstrap/ is superseded by terraform/lab/02-bootstrap. Both are
-        # tracked in docs/security/known-issues.md; excluded here so the hook
-        # reports on code that can actually be validated.
-        exclude: ^terraform/(environments|bootstrap)/
-        args:
-          - --init-args=-backend=false
+      # terraform_validate, checkov, tfsec, tflint and terraform-docs are not
+      # run here. Each shells out to a binary the CI runner does not install, or
+      # needs `terraform init` in every directory, and each already has a
+      # dedicated job: "Terraform Format & Parse" in 00-pre-checks parses the
+      # whole tree, 01-iac-security runs the scanners, and 10-lab-cost-guard
+      # validates every lab layer.
 
   - repo: https://github.com/hadolint/hadolint
     rev: v2.12.0
