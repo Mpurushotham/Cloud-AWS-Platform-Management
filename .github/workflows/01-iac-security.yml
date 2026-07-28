@@ -48,26 +48,30 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+      # tfsec is deprecated -- Aqua merged it into Trivy's config scanner, and
+      # aquasecurity/tfsec-action no longer writes the SARIF file it advertises,
+      # so the upload step failed on a missing path while the scan output went
+      # to stdout. Trivy config runs the same rule set and is maintained.
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          working_directory: terraform/
+          scan-type: config
+          scan-ref: terraform/
           format: sarif
-          sarif_file: tfsec-results.sarif
-          additional_args: --exclude-downloaded-modules --minimum-severity HIGH
+          output: tfsec-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+          skip-dirs: '**/.terraform'
 
-      # tfsec-action does not always produce the SARIF file (for example when
-      # the scan itself errors), and the upload step then fails on a missing
-      # path -- masking the real error with a confusing one.
       - name: Check for SARIF output
         id: tfsec_sarif
         if: always()
         run: |
-          if [ -f tfsec-results.sarif ]; then
+          if [ -s tfsec-results.sarif ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::tfsec produced no SARIF output; skipping upload"
+            echo "::warning::config scan produced no SARIF; skipping upload"
           fi
 
       - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3

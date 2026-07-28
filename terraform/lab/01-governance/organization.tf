@@ -26,4 +26,3 @@ resource "aws_organizations_organization" "this" {
     prevent_destroy = true
   }
 }
-

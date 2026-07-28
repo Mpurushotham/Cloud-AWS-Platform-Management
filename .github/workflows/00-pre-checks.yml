@@ -28,6 +28,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          # Allowlists reviewed false positives -- see .gitleaks.toml for why
+          # each entry is there.
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
 
       - name: TruffleHog scan
         uses: trufflesecurity/trufflehog@bc2cd3e45e3aa4a6c627bd0c424580f86dde1855 # v3.90.10
