@@ -93,12 +93,49 @@ Confirm:
 aws iam list-mfa-devices --user-name muktha-aws --query 'MFADevices[].SerialNumber' --output text
 ```
 
-### Step 2 — Configure the profiles and prove assumption works
+### Step 1a — Sign in as the IAM user rather than root
+
+This needs no MFA and no access keys, and is worth doing immediately even if
+the rest of the cutover waits.
+
+**Console.** Use the account alias URL and choose *IAM user*, not *Root user*:
+
+```
+https://muktha-ab.signin.aws.amazon.com/console
+```
+
+**CLI.** `aws login` acquires temporary credentials corresponding to *your
+selected console session*, so it follows whoever the browser is signed in as:
 
 ```bash
-aws configure --profile cap-iam-user     # muktha-aws access key + secret, region us-east-1
+# Sign out of root in the browser, sign in as the IAM user, then:
+aws login
+aws sts get-caller-identity
+# want: arn:aws:iam::<ACCOUNT_ID>:user/muktha-aws
+# not:  arn:aws:iam::<ACCOUNT_ID>:root
+```
+
+Prefer this over long-lived access keys. A key is a permanent credential that
+must be stored, rotated and eventually leaked; `aws login` issues a session that
+expires and refreshes on its own. Creating an access key just to run the CLI
+reintroduces exactly what [ADR-0005](../../../docs/adr/0005-github-oidc-over-static-keys.md)
+removes from CI.
+
+> **A partial credentials file silently breaks everything.** An entry in
+> `~/.aws/credentials` with `aws_access_key_id` but no `aws_secret_access_key`
+> shadows the `login_session` in `~/.aws/config`, and every call fails with
+> *"Partial credentials found in shared-credentials-file"* rather than falling
+> back. If you see that, empty the file and re-run `aws login`.
+
+### Step 2 — Configure the role profile and prove assumption works
+
+Terraform still needs a profile that assumes the role, because the provider
+cannot read the `aws login` session directly:
+
+```bash
 terraform output -raw aws_config_profile_snippet >> ~/.aws/config
-# edit ~/.aws/config: set mfa_serial to the ARN from step 1
+# edit ~/.aws/config: set mfa_serial to the ARN from step 1,
+# and set source_profile = default (the aws login session)
 ```
 
 Then verify. This must return an **assumed-role** ARN, not a user or root ARN:
