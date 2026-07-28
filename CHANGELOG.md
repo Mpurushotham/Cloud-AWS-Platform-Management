@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.0...v1.0.1) (2026-07-28)
+
+### Bug Fixes
+
+* **ci:** remove non-existent upper() and repair the drift job matrix ([1b4e5eb](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/1b4e5ebe4825e5bb456576185d5f48df45ebf4c3))
+
 ## 1.0.0 (2026-07-28)
 
 ### Features
