@@ -44,7 +44,7 @@ jobs:
         run: |
           prowler aws \
             --compliance cis_1.4_aws \
-            --output-formats sarif,html,csv \
+            --output-formats sarif html csv \
             --output-filename prowler-cis-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
