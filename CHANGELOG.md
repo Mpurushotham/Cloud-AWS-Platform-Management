@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.1...v1.0.2) (2026-07-28)
+
+### Bug Fixes
+
+* **ci:** skip the branch guard hook in ci rather than failing on it ([4293fc1](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/4293fc1aec0e99deb765a085f61be6286e37be93))
+
 ## [1.0.1](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.0...v1.0.1) (2026-07-28)
 
 ### Bug Fixes
