@@ -29,6 +29,12 @@ jobs:
           format: sarif
           output: trivy-fs-results.sarif
           severity: CRITICAL,HIGH
+          # Secrets are already covered by gitleaks, detect-secrets and
+          # GitGuardian; a fourth scanner adds runtime and duplicate findings.
+          scanners: vuln
+          # Provider binaries and vendored packages are not what we ship.
+          skip-dirs: '**/.terraform,**/node_modules,**/cdk.out'
+          trivyignores: .trivyignore
           ignore-unfixed: true
           exit-code: 1
 
@@ -49,14 +55,23 @@ jobs:
       # overrides cannot reach, and aws-cdk-lib is already on its latest release.
       # Direct dependencies are pinned past it via an override in cdk/package.json.
       # Recorded in docs/security/known-issues.md.
+      # Driven through the CLI rather than anchore/scan-action so that
+      # .grype.yaml is honoured. The action does not read it, and without the
+      # exclusions there it reports hundreds of findings from .terraform/
+      # provider binaries -- Go advisories belonging to HashiCorp's release that
+      # are neither shipped nor fixable here.
+      - name: Install Grype
+        uses: anchore/scan-action/download-grype@64a33b277ea7a1215a3c142735a1091341939ff5 # v4
+        id: grype_install
+
       - name: Scan with Grype
         id: grype
-        uses: anchore/scan-action@64a33b277ea7a1215a3c142735a1091341939ff5 # v4
-        with:
-          path: "."
-          fail-build: true
-          severity-cutoff: critical
-          output-format: sarif
+        run: |
+          "${{ steps.grype_install.outputs.cmd }}" dir:. \
+            --config .grype.yaml \
+            --fail-on critical \
+            --output sarif \
+            --file results.sarif
 
       - name: Check for SARIF output
         id: grype_sarif
