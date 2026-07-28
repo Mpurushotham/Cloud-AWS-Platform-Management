@@ -1,3 +1,9 @@
+## [1.0.3](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.2...v1.0.3) (2026-07-28)
+
+### Bug Fixes
+
+* **ci:** correct prowler framework names and retarget drift detection ([e6c298c](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/e6c298c874e95b1dece7ec71680cabfd34d19a30))
+
 ## [1.0.2](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.1...v1.0.2) (2026-07-28)
 
 ### Bug Fixes
