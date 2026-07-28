@@ -98,6 +98,12 @@ jobs:
           extra_args: --all-files --show-diff-on-failure
         env:
           PRE_COMMIT_HOME: /tmp/pre-commit-cache
+          # no-commit-to-branch guards a developer's working copy. In CI the
+          # checkout *is* main, so the hook fails on every push by definition and
+          # tells nobody anything. `stages: [pre-commit]` does not help --
+          # `pre-commit run --all-files` runs that stage. Branch protection is
+          # what actually enforces this.
+          SKIP: no-commit-to-branch
 
       - name: YAML lint
         run: |
