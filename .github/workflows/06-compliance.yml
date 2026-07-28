@@ -44,7 +44,7 @@ jobs:
         run: |
           prowler aws \
             --compliance cis_1.4_aws \
-            --output-formats sarif html csv \
+            --output-formats json-ocsf html csv \
             --output-filename prowler-cis-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
@@ -53,7 +53,7 @@ jobs:
         run: |
           prowler aws \
             --compliance aws_foundational_security_best_practices_aws \
-            --output-formats sarif \
+            --output-formats json-ocsf \
             --output-filename prowler-fsbp-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
@@ -62,16 +62,15 @@ jobs:
         run: |
           prowler aws \
             --compliance pci_3.2.1_aws \
-            --output-formats sarif \
+            --output-formats json-ocsf \
             --output-filename prowler-pci-${{ matrix.account }} \
             --output-directory prowler-results/ \
             --ignore-exit-code-3
 
-      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
-        if: always()
-        with:
-          sarif_file: prowler-results/prowler-cis-${{ matrix.account }}.sarif.json
-          category: prowler-${{ matrix.account }}
+      # Prowler no longer emits SARIF for the aws provider, so findings are
+      # published as artifacts rather than into GitHub code scanning. Its
+      # json-asff output can be sent to Security Hub instead once that is
+      # enabled -- see docs/security/known-issues.md.
 
       - name: Upload compliance reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
