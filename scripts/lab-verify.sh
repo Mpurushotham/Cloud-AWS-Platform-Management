@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 #
+# SC2016 is disabled for this file. It deliberately single-quotes two kinds of
+# literal that must NOT be expanded by the shell: JMESPath expressions using
+# backticks, e.g. --query 'Roles[?starts_with(RoleName,`cap-`)]', and dollar
+# amounts in output such as '$0.01'. Expanding either would break the query or
+# corrupt the text.
+# shellcheck disable=SC2016
+#
 # Verifies the lab deployment and fails if anything billable exists.
 #
 # Intended to run both locally and in CI (see .github/workflows/10-lab-cost-guard.yml).
 # Exit codes: 0 all good, 1 a billable resource was found, 2 a control is missing.
 
 set -uo pipefail
-
-# SC2016: this script deliberately uses single quotes for two kinds of literal
-# that must NOT be expanded by the shell -- JMESPath expressions containing
-# backticks (--query 'Roles[?starts_with(RoleName,`cap-`)]') and dollar amounts
-# in output ('$0.01'). Expanding either would break the query or corrupt the text.
-# shellcheck disable=SC2016
 
 REGION="${AWS_REGION:-us-east-1}"
 billable=0

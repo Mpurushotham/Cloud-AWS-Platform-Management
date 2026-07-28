@@ -39,9 +39,7 @@ jobs:
           # Grype already fails on critical; two tools gating the same finding
           # produces two red checks for one problem and teaches people to ignore
           # both. Findings remain visible in the Security tab.
-          exit-code: '0'
           ignore-unfixed: true
-          exit-code: 1
 
       - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()

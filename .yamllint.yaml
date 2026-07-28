@@ -13,11 +13,9 @@ rules:
   comments:
     min-spaces-from-content: 1
 
-  document-start:
-    present: false
-
-  braces:
-    max-spaces-inside: 1
+  # "---" is conventional in Kubernetes manifests and GitHub workflows, and is
+  # required for multi-document files. Presence is fine; absence is fine too.
+  document-start: disable
 
   brackets:
     max-spaces-inside: 1
@@ -28,6 +26,10 @@ rules:
     check-multi-line-strings: false
 
 ignore: |
+  # Helm templates are Go templates, not YAML: "{{ .Values.x }}" is reported as
+  # "too many spaces inside braces" and the file cannot be parsed as a document.
+  # `helm lint` is the correct tool and runs in the Kubernetes pipeline.
+  kubernetes/helm-charts/*/templates/
   cdk/node_modules/
   .terraform/
   cdk/cdk.out/

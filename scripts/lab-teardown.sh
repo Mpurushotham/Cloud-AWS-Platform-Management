@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 #
+# SC2016 is disabled for this file: it prints shell commands for the operator
+# to run, so '$(...)' inside single quotes is literal output rather than a
+# missed expansion.
+# shellcheck disable=SC2016
+#
 # Destroys the lab in reverse dependency order.
 #
 # Layers 01 and 02 hold resources that intentionally refuse to be destroyed:
