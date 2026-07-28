@@ -82,9 +82,30 @@ where reproducibility matters most.
 
 ## Compliance
 
-Configured in GitHub environment settings for `dev`, `staging` and `production`.
-Consumed by `08-terraform-apply.yml`, `cdk-deploy.yml` and
+Configured in GitHub environment settings for `dev`, `staging`, `production`
+and `management`. Consumed by `08-terraform-apply.yml`, `cdk-deploy.yml` and
 `platform-foundation.yml`.
 
 Because these settings live outside the repository, they should be audited
-periodically — a change to them leaves no trace in the git history.
+periodically — a change to them leaves no trace in the git history:
+
+```bash
+for env in dev staging production management; do
+  printf "%-12s " "$env"
+  gh api "repos/<owner>/<repo>/environments/$env" \
+    --jq '[.protection_rules[] | if .type=="required_reviewers" then "reviewers=\(.reviewers|length)"
+           elif .type=="wait_timer" then "wait=\(.wait_timer)m" else .type end] | join("  ")'
+done
+```
+
+## Deviations from this ADR in the current deployment
+
+Recorded rather than quietly tolerated:
+
+| Intended | Actual | Why |
+|----------|--------|-----|
+| dev auto-approves | **1 required reviewer** | `terraform/environments/dev` provisions EKS, NAT gateways and RDS — roughly $400–600/month — into member accounts that do not exist. Until they do, an unattended dev apply is a cost and blast-radius risk rather than a convenience. Revert to auto-approve once the accounts exist and a dev apply is genuinely routine. |
+| prod requires 2 reviewers | **1 required reviewer** | The organisation currently has one human. Two distinct approvers is unsatisfiable, and configuring it would deadlock every production deploy. Raise to 2 as soon as there is a second person. |
+| approval is independent | **self-approval permitted** | With one human, `prevent_self_review` would deadlock. This means the gate currently enforces *deliberateness* — a conscious click — not separation of duties. That is a materially weaker property and should not be described as peer review. |
+
+The 60-minute production wait timer **is** configured as specified.
