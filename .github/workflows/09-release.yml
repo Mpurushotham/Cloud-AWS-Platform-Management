@@ -28,12 +28,12 @@ jobs:
       # default GITHUB_TOKEN. Falling back keeps releases working without it
       # rather than failing checkout outright with "Input required and not
       # supplied: token".
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "20"
 
@@ -58,16 +58,18 @@ jobs:
     needs: [release]
     if: needs.release.outputs.new_release_published == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ needs.release.outputs.new_release_git_tag }}
 
-      - name: Install Syft + cosign
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b /usr/local/bin
-          curl -sSfL https://raw.githubusercontent.com/sigstore/cosign/main/install.sh \
-            | sh -s -- -b /usr/local/bin cosign
+      # Pinned actions instead of piping remote install scripts from a main
+      # branch into a shell -- that content can change at any time and runs
+      # with the runner's full privileges.
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@8e94d75ddd33f69f691467e42275782e4bfefe84 # v0.20.9
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Generate release SBOM
         run: |
@@ -76,7 +78,7 @@ jobs:
             --output cyclonedx-json=sbom-${{ needs.release.outputs.new_release_version }}.cyclonedx.json
 
       - name: Attach SBOM to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ needs.release.outputs.new_release_git_tag }}
           files: sbom-*.json

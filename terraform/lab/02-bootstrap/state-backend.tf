@@ -172,6 +172,8 @@ resource "aws_s3_bucket_policy" "state" {
 
 # State locking. Terraform 1.10 can lock natively in S3 via use_lockfile, which
 # removes this table; this repository pins ~> 1.9, so the table is still needed.
+# nosemgrep: aws-dynamodb-table-unencrypted -- key choice follows
+# var.state_encryption; defaults to an AWS-owned key for cost. See ADR-0015.
 resource "aws_dynamodb_table" "state_lock" {
   name         = var.state_lock_table_name
   billing_mode = "PAY_PER_REQUEST"

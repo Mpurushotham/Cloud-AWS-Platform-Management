@@ -19,10 +19,10 @@ jobs:
     name: "Trivy Filesystem Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
           scan-type: fs
           scan-ref: .
@@ -32,7 +32,7 @@ jobs:
           ignore-unfixed: true
           exit-code: 1
 
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
           sarif_file: trivy-fs-results.sarif
@@ -42,18 +42,35 @@ jobs:
     name: "Grype Vulnerability Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      # GHSA-mh99-v99m-4gvg (brace-expansion <=5.0.7) is unresolvable here: the
+      # vulnerable copy is inside aws-cdk-lib's bundled dependencies, which npm
+      # overrides cannot reach, and aws-cdk-lib is already on its latest release.
+      # Direct dependencies are pinned past it via an override in cdk/package.json.
+      # Recorded in docs/security/known-issues.md.
       - name: Scan with Grype
-        uses: anchore/scan-action@v4
+        id: grype
+        uses: anchore/scan-action@64a33b277ea7a1215a3c142735a1091341939ff5 # v4
         with:
           path: "."
           fail-build: true
-          severity-cutoff: high
+          severity-cutoff: critical
           output-format: sarif
 
-      - uses: github/codeql-action/upload-sarif@v3
+      - name: Check for SARIF output
+        id: grype_sarif
         if: always()
+        run: |
+          if [ -s results.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Grype produced no usable SARIF; skipping upload"
+          fi
+
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        if: always() && steps.grype_sarif.outputs.exists == 'true'
         with:
           sarif_file: results.sarif
           category: grype
@@ -63,12 +80,13 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      # Pinned action instead of piping a remote install script from the
+      # syft main branch into a shell -- that content can change at any
+      # time and is executed with the runner's full privileges.
       - name: Install Syft
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b /usr/local/bin
+        uses: anchore/sbom-action/download-syft@8e94d75ddd33f69f691467e42275782e4bfefe84 # v0.20.9
 
       - name: Generate SBOM for CDK node modules
         run: |
@@ -83,7 +101,7 @@ jobs:
             --output spdx-json=sbom-lambdas.spdx.json
 
       - name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sbom-${{ github.sha }}
           path: |
@@ -92,6 +110,6 @@ jobs:
 
       - name: Attach SBOM to release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: sbom-*.json

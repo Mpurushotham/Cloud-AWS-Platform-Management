@@ -64,3 +64,11 @@ labels:
   app: ""
   version: ""
   team: ""
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  privileged: false
+  capabilities:
+    drop:
+      - ALL

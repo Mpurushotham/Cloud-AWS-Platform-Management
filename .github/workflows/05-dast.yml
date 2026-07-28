@@ -30,10 +30,10 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event.inputs.environment != 'prod' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@66042c8e7e24680119199a017e5b0e8603bf4dae # v0.12.0
         with:
           target: ${{ github.event.inputs.target_url || 'https://api-dev.cap.internal' }}
           rules_file_name: ".zap/rules.tsv"
@@ -46,7 +46,7 @@ jobs:
           allow_issue_writing: false
 
       - name: Upload ZAP SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
           sarif_file: zap-results.sarif
@@ -57,10 +57,10 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event.inputs.environment != 'prod' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run ZAP API Scan
-        uses: zaproxy/action-api-scan@v0.7.0
+        uses: zaproxy/action-api-scan@f34b07497d46a84e06d71ad4f304311634c24137 # v0.7.0
         with:
           target: ${{ github.event.inputs.target_url || 'https://api-dev.cap.internal' }}/openapi.json
           format: openapi

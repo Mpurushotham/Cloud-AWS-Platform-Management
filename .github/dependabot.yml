@@ -1,11 +1,86 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration.
+#
+# The previous file was the unedited GitHub template: package-ecosystem was ""
+# and directory pointed at "/dependabot/", so nothing was ever updated.
+#
+# cooldown delays adoption of a brand-new release. A compromised publish is most
+# dangerous in its first days, before anyone has looked at it; waiting gives the
+# ecosystem time to notice before the version lands in a pull request here.
 
 version: 2
+
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/dependabot/" # Location of package manifests
+  # GitHub Actions. Every action in this repository is pinned to a commit SHA
+  # with the version in a trailing comment; Dependabot understands that form and
+  # bumps both together.
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # CDK application layer.
+  - package-ecosystem: "npm"
+    directory: "/cdk"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "cdk"
+    groups:
+      # Test tooling churns constantly and is never shipped; one PR is enough.
+      dev-dependencies:
+        dependency-type: "development"
+
+  # Terraform providers.
+  - package-ecosystem: "terraform"
+    directories:
+      - "/terraform/lab/00-identity"
+      - "/terraform/lab/01-governance"
+      - "/terraform/lab/02-bootstrap"
+      - "/terraform/lab/03-network"
+      - "/terraform/lab/04-workload"
+      - "/terraform/modules/*"
+      - "/terraform/environments/*"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "terraform"
+
+  # Python used by the remediation lambdas and helper scripts.
+  - package-ecosystem: "pip"
+    directories:
+      - "/security/remediation-lambdas/*"
+      - "/scripts"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"

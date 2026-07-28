@@ -316,3 +316,57 @@ Dependabot propose updates.
 
 Security issues in this repository should be raised as a private security
 advisory rather than a public issue.
+
+---
+
+## FIXED — 110 GitHub Actions were pinned to mutable tags
+
+**Severity:** medium, supply chain
+
+Every workflow referenced actions by tag (`actions/checkout@v4`). A tag is
+mutable: whoever controls an action repository can repoint it at new code, which
+then executes inside workflows holding `id-token: write` — the permission that
+mints AWS credentials.
+
+Three workflows additionally piped a remote install script straight into a
+shell:
+
+```yaml
+run: |
+  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh
+```
+
+That fetches whatever is on `main` at the moment the job runs and executes it
+with the runner's full privileges. Nothing pins it and nothing verifies it.
+
+**Fixed:** all 110 action references are pinned to commit SHAs with the version
+in a trailing comment, which Dependabot understands and updates. The three
+`curl | sh` installs are replaced with pinned `anchore/sbom-action/download-syft`
+and `sigstore/cosign-installer` steps.
+
+Semgrep findings fell from 117 to 3 as a result.
+
+---
+
+## FIXED — Dependabot was never actually enabled
+
+`.github/dependabot.yml` was the unedited GitHub template: `package-ecosystem`
+was the empty string and `directory` pointed at `/dependabot/`. No ecosystem was
+ever scanned, so no update PR could ever be raised — while the badge and the file
+suggested otherwise.
+
+**Fixed:** real configuration for `github-actions`, `npm` (cdk), `terraform` and
+`pip`, each with a 7-day `cooldown`. The cooldown matters: a compromised release
+is most dangerous in its first days, before anyone has looked at it.
+
+---
+
+## ACCEPTED — three Semgrep warnings remain
+
+| Finding | Why it stays |
+|---------|--------------|
+| `aws-dynamodb-table-unencrypted` ×2 | AWS-owned key rather than a CMK — the $1/month/key tradeoff in [ADR-0015](../adr/0015-lab-encryption-tradeoffs.md). Data is still encrypted at rest. |
+| `allow-privilege-escalation` | The Helm template sets `securityContext` from `.Values.containerSecurityContext`, where `allowPrivilegeEscalation: false` is defined. Semgrep analyses the template statically and cannot resolve `{{ toYaml }}`, so it reports a false positive. |
+
+The SAST job runs with `--severity=ERROR`, so warnings surface in the SARIF
+report without blocking a merge. There are currently **zero** ERROR findings.

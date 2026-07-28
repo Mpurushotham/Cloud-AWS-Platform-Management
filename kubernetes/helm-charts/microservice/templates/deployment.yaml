@@ -17,6 +17,10 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Container-level context. The pod-level securityContext above does
+          # not prevent a container process gaining privileges through a setuid
+          # binary; allowPrivilegeEscalation must be set on the container.
+          securityContext: {{ toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
             - containerPort: {{ .Values.service.port }}
           livenessProbe: {{ toYaml .Values.livenessProbe | nindent 12 }}

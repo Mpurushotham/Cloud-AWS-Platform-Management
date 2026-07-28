@@ -22,10 +22,10 @@ jobs:
     name: "Checkov IaC Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12.3113.0
+        uses: bridgecrewio/checkov-action@d9d1e5cdc53e3a91f0c4c58db7bc19ee31cac7e5 # v12.3113.0
         with:
           directory: terraform/
           config_file: .checkov.yml
@@ -36,7 +36,7 @@ jobs:
           download_external_modules: false
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         if: always()
         with:
           sarif_file: checkov-results.sarif
@@ -46,18 +46,32 @@ jobs:
     name: "tfsec Scan"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
         with:
           working_directory: terraform/
           format: sarif
           sarif_file: tfsec-results.sarif
           additional_args: --exclude-downloaded-modules --minimum-severity HIGH
 
-      - uses: github/codeql-action/upload-sarif@v3
+      # tfsec-action does not always produce the SARIF file (for example when
+      # the scan itself errors), and the upload step then fails on a missing
+      # path -- masking the real error with a confusing one.
+      - name: Check for SARIF output
+        id: tfsec_sarif
         if: always()
+        run: |
+          if [ -f tfsec-results.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::tfsec produced no SARIF output; skipping upload"
+          fi
+
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        if: always() && steps.tfsec_sarif.outputs.exists == 'true'
         with:
           sarif_file: tfsec-results.sarif
           category: tfsec
@@ -66,9 +80,9 @@ jobs:
     name: "TFLint"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
         with:
           tflint_version: v0.52.0
 
@@ -109,10 +123,10 @@ jobs:
     # credential it cannot have.
     if: github.event_name == 'pull_request' && vars.INFRACOST_ENABLED == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Infracost
-        uses: infracost/actions/setup@v3
+        uses: infracost/actions/setup@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
@@ -139,7 +153,7 @@ jobs:
     name: "OPA Policy Validation"
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install OPA + conftest
         run: |
