@@ -61,8 +61,8 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
-          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.env))] }}
-          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
           role-session-name: GitHubActions-CDKSynth-${{ matrix.env }}-${{ github.run_id }}
 
       - name: Install CDK
@@ -118,7 +118,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_DEV }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
           role-session-name: GitHubActions-CDKDeploy-dev-${{ github.run_id }}
 
       - run: npm ci
@@ -153,7 +153,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_STAGING }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
           role-session-name: GitHubActions-CDKDeploy-staging-${{ github.run_id }}
 
       - run: npm ci
@@ -188,7 +188,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.TERRAFORM_APPLY_ROLE_PROD }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
           role-session-name: GitHubActions-CDKDeploy-prod-${{ github.run_id }}
 
       - run: npm ci

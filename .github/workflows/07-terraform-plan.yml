@@ -74,7 +74,7 @@ jobs:
             -no-color \
             -detailed-exitcode \
             -input=false 2>&1 | tee plan.txt
-          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
         continue-on-error: true
 
       - name: Convert plan to JSON for OPA
@@ -103,9 +103,9 @@ jobs:
         id: drift
         run: |
           if [ "${{ steps.plan.outputs.exitcode }}" = "2" ]; then
-            echo "DRIFT_DETECTED=true" >> $GITHUB_OUTPUT
+            echo "DRIFT_DETECTED=true" >> "$GITHUB_OUTPUT"
           else
-            echo "DRIFT_DETECTED=false" >> $GITHUB_OUTPUT
+            echo "DRIFT_DETECTED=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Comment plan on PR

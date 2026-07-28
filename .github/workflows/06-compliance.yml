@@ -99,29 +99,29 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
-          role-to-assume: ${{ vars[format('TERRAFORM_PLAN_ROLE_{0}', upper(matrix.account))] }}
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-Drift-${{ matrix.account }}-${{ github.run_id }}
+          role-session-name: GitHubActions-Drift-${{ matrix.env }}-${{ github.run_id }}
 
       - name: Terraform init
-        working-directory: terraform/environments/${{ matrix.account }}
+        working-directory: terraform/environments/${{ matrix.env }}
         run: terraform init -input=false
 
       - name: Terraform plan (drift check)
         id: plan
-        working-directory: terraform/environments/${{ matrix.account }}
+        working-directory: terraform/environments/${{ matrix.env }}
         run: |
           terraform plan \
             -var-file=terraform.tfvars \
             -detailed-exitcode \
             -input=false \
             -no-color 2>&1 | tee plan-output.txt
-          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Alert on drift
         if: steps.plan.outputs.exitcode == '2'
         run: |
-          echo "::error::DRIFT DETECTED in ${{ matrix.account }} environment!"
+          echo "::error::DRIFT DETECTED in ${{ matrix.env }} environment!"
           echo "Review plan output above for resource changes."
           cat plan-output.txt
           exit 1
