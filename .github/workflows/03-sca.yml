@@ -65,16 +65,18 @@ jobs:
       # provider binaries -- Go advisories belonging to HashiCorp's release that
       # are neither shipped nor fixable here.
       - name: Install Grype
-        uses: anchore/scan-action/download-grype@64a33b277ea7a1215a3c142735a1091341939ff5 # v4
+        uses: anchore/scan-action/download-grype@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         id: grype_install
 
       # The DB bundled with the installed grype is far older than the 5-day
       # maximum age grype enforces, so a scan without this fails with
       # "db could not be loaded" rather than reporting anything.
-      # db update and the scan must share a cache directory, so they run in one
-      # step. The DB shipped with the installed binary is far past the 5-day
-      # maximum age grype enforces, and without a refresh the scan aborts with
-      # "db could not be loaded" rather than reporting anything.
+      # scan-action v4 installed grype 0.80.0, whose DB schema Anchore no longer
+      # publishes -- `db update` succeeded while leaving a 20-week-old database,
+      # and the scan then aborted with "db could not be loaded" rather than
+      # reporting anything. v7 installs a current grype.
+      #
+      # db update and the scan share a cache directory, so they run in one step.
       - name: Scan with Grype
         id: grype
         env:
