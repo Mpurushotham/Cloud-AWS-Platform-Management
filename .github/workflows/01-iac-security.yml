@@ -90,7 +90,13 @@ jobs:
         with:
           tflint_version: v0.52.0
 
+      # tflint --init downloads its ruleset plugin from the GitHub API.
+      # Unauthenticated requests share a per-IP limit across all runners, so
+      # this fails intermittently with "403 API rate limit exceeded" and
+      # nothing to do with the code being linted. The token raises the limit.
       - name: Init TFLint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: tflint --init --config=.tflint.hcl
 
       # Fails on errors; warnings are reported but do not block.
