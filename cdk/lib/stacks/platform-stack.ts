@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import { Construct } from 'constructs';
 
-export interface UplatformUstackProps extends cdk.StackProps {
+export interface PlatformStackProps extends cdk.StackProps {
   readonly environment: string;
   readonly config: Record<string, unknown>;
   readonly vpc?: ec2.IVpc;
@@ -14,7 +14,7 @@ export interface UplatformUstackProps extends cdk.StackProps {
   readonly allowedSecurityGroups?: ec2.ISecurityGroup[];
 }
 
-export class UplatformUstack extends cdk.Stack {
+export class PlatformStack extends cdk.Stack {
   // Public properties exported for dependent stacks
   public readonly vpc!: ec2.IVpc;
   public readonly privateSubnets!: ec2.ISubnet[];
@@ -22,7 +22,7 @@ export class UplatformUstack extends cdk.Stack {
   public readonly kmsKeyArns!: Record<string, string>;
   public readonly workloadSecurityGroups!: ec2.ISecurityGroup[];
 
-  constructor(scope: Construct, id: string, props: UplatformUstackProps) {
+  constructor(scope: Construct, id: string, props: PlatformStackProps) {
     super(scope, id, props);
 
     const { environment } = props;

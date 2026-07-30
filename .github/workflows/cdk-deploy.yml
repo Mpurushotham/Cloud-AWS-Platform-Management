@@ -47,7 +47,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [dev, staging, prod]
+        # Only dev has a real account behind it. staging and prod still point at
+        # placeholder account IDs in cdk.json, and `cdk synth` must make AWS
+        # calls to resolve context -- so those jobs can only ever fail. Add them
+        # back when the member accounts exist.
+        env: [dev]
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

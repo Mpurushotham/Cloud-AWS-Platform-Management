@@ -36,7 +36,7 @@ jobs:
           download_external_modules: false
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         if: always()
         with:
           sarif_file: checkov-results.sarif
@@ -74,7 +74,7 @@ jobs:
             echo "::warning::config scan produced no SARIF; skipping upload"
           fi
 
-      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+      - uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         if: always() && steps.tfsec_sarif.outputs.exists == 'true'
         with:
           sarif_file: tfsec-results.sarif
@@ -90,7 +90,13 @@ jobs:
         with:
           tflint_version: v0.52.0
 
+      # tflint --init downloads its ruleset plugin from the GitHub API.
+      # Unauthenticated requests share a per-IP limit across all runners, so
+      # this fails intermittently with "403 API rate limit exceeded" and
+      # nothing to do with the code being linted. The token raises the limit.
       - name: Init TFLint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: tflint --init --config=.tflint.hcl
 
       # Fails on errors; warnings are reported but do not block.
