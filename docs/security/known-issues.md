@@ -457,3 +457,32 @@ modules pin `~> 5.0`, so `modules/security-hub` then failed to validate.
 The warning had appeared because the modules had **no** `versions.tf` and were
 resolving whatever provider was newest. Adding the pins was the real fix;
 the attribute rename was chasing a symptom of the missing pin. Reverted.
+
+---
+
+## OPEN — AWS provider 5.x → 6.x upgrade is deferred
+
+**Severity:** technical debt, not a vulnerability
+
+Adding `versions.tf` to all 32 modules made their provider constraint explicit
+for the first time, and Dependabot immediately raised **44 pull requests** to
+move `hashicorp/aws` from `~> 5.0` to `~> 6.55` — one per module directory.
+
+That is one architectural decision, not 44, and it is a breaking one:
+
+- provider 6 renames `data.aws_region.<name>.name` to `.region`, which
+  `modules/security-hub` and `modules/vpc` both use. (This repository has
+  already been bitten by the reverse: `.region` was introduced while the
+  modules resolved an unpinned provider, then broke once `~> 5.0` was pinned.)
+- `CLAUDE.md` states `aws ~> 5.0` as a project convention, so changing it is a
+  documented-decision change, not a dependency bump.
+- 32 modules and 5 lab layers would all need re-validating together.
+
+**Deferred deliberately.** `.github/dependabot.yml` now groups
+`hashicorp/aws` into a single PR and ignores major-version updates for it, so
+the noise does not recur. Minor and patch updates still flow normally.
+
+**To do it properly:** write an ADR, change the constraint in one commit across
+all modules, fix the `aws_region` attribute references, re-run
+`terraform validate` on all 37 directories, and re-run the lab plan to confirm
+no resource replacement. Then remove the `ignore` entry.
