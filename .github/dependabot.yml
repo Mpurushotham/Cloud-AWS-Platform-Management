@@ -67,6 +67,23 @@ updates:
     labels:
       - "dependencies"
       - "terraform"
+    groups:
+      # One provider version is a single decision, not 44. Without grouping,
+      # every module directory raises its own PR for the same bump -- which is
+      # exactly what happened when versions.tf was added across 32 modules.
+      aws-provider:
+        patterns:
+          - "hashicorp/aws"
+    ignore:
+      # The AWS provider 5 -> 6 upgrade is a breaking change, not a routine
+      # bump: provider 6 renames data.aws_region.<x>.name to .region, which
+      # this repository uses in modules/security-hub and modules/vpc, and
+      # CLAUDE.md pins ~> 5.0 as a documented convention.
+      #
+      # It belongs in one deliberate change with an ADR, not an automated PR.
+      # Remove this entry when that work is scheduled.
+      - dependency-name: "hashicorp/aws"
+        update-types: ["version-update:semver-major"]
 
   # Python used by the remediation lambdas and helper scripts.
   - package-ecosystem: "pip"
