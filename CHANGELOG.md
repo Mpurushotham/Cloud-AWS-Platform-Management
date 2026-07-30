@@ -1,3 +1,9 @@
+## [1.0.6](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.5...v1.0.6) (2026-07-30)
+
+### Bug Fixes
+
+* **cdk:** repair mangled stack class names and point dev at the real account ([ae16de9](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/commit/ae16de9402944ed800e7ae2051588e29c3a76a2b))
+
 ## [1.0.5](https://github.com/Mpurushotham/Cloud-AWS-Platform-Management/compare/v1.0.4...v1.0.5) (2026-07-28)
 
 ### Bug Fixes
