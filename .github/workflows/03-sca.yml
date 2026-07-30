@@ -42,7 +42,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '0'
 
-      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+      - uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         if: always()
         with:
           sarif_file: trivy-fs-results.sarif
@@ -101,7 +101,7 @@ jobs:
             echo "::warning::Grype produced no usable SARIF; skipping upload"
           fi
 
-      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+      - uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4
         if: always() && steps.grype_sarif.outputs.exists == 'true'
         with:
           sarif_file: results.sarif
