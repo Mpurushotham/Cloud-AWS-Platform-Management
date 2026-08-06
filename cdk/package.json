@@ -15,11 +15,11 @@
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.19.0",
+    "@types/node": "^26.1.2",
     "aws-cdk": "^2.155.0",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "jest": {
     "testEnvironment": "node",
