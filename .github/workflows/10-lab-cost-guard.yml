@@ -8,9 +8,10 @@ name: "10 - Lab Cost Guard"
 # See terraform/lab/README.md and docs/adr/0013-single-account-lab-profile.md.
 
 on:
-  schedule:
-    # Daily, shortly after the compliance run.
-    - cron: "0 7 * * *"
+  # Schedule paused: OIDC role assumption fails (see 06-compliance).
+  # schedule:
+  #   # Daily, shortly after the compliance run.
+  #   - cron: "0 7 * * *"
   pull_request:
     paths:
       - "terraform/lab/**"
