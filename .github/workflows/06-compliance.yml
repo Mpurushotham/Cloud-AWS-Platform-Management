@@ -1,8 +1,11 @@
 name: "06 - Compliance"
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
+  # Schedule paused: OIDC role assumption fails ("web identity token could not
+  # be validated"). AWS_*_ROLE_ARN also point at the management account; move
+  # the roles to the dev account with a working trust policy, then re-enable.
+  # schedule:
+  #   - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:

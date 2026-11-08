@@ -1,8 +1,10 @@
 name: "05 - DAST"
 
 on:
-  schedule:
-    - cron: "0 2 * * 1-5"
+  # Schedule paused: default target https://api-dev.cap.internal is internal DNS,
+  # unreachable from GitHub-hosted runners. Run manually with a reachable URL.
+  # schedule:
+  #   - cron: "0 2 * * 1-5"
   workflow_dispatch:
     inputs:
       target_url:
